@@ -430,8 +430,22 @@ let tgAtual = 'H1M5';
 let viewAtual = 'geral';
 
 async function supaFetch(path){
-  const r = await fetch(SUPA_URL+path,{headers:{'apikey':SUPA_ANON,'Authorization':'Bearer '+SUPA_ANON}});
-  return r.json();
+  const headers={'apikey':SUPA_ANON,'Authorization':'Bearer '+SUPA_ANON};
+  const lote=1000;
+  let inicio=0;
+  let todos=[];
+  while(true){
+    const r = await fetch(SUPA_URL+path,{headers:{...headers,'Range-Unit':'items','Range':inicio+'-'+(inicio+lote-1),'Prefer':'count=exact'}});
+    const dados = await r.json();
+    if(!Array.isArray(dados)) return dados;
+    todos = todos.concat(dados);
+    const range = r.headers.get('content-range')||'';
+    const totalMatch = range.match(/\/(\d+)$/);
+    const total = totalMatch ? parseInt(totalMatch[1],10) : null;
+    if(dados.length<lote || (total!==null && todos.length>=total)) break;
+    inicio += lote;
+  }
+  return todos;
 }
 
 function voltarGeral(){
