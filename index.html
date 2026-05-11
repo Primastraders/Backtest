@@ -415,7 +415,7 @@ footer{position:relative;z-index:10;text-align:center;padding:16px;font-size:10p
       <button class="sim-btn secondary" onclick="selecionarHorasSim(false)">Limpar horários</button>
       <button class="sim-btn" onclick="carregarSimulador()">Simular</button>
     </div>
-    <div class="sim-note" id="simContexto">Regra: Take ganha a entrada 1; Virada perde a entrada 1 e ganha a entrada 2; Stop perde entrada 1 + entrada 2.</div>
+    <div class="sim-note" id="simContexto">Regra: Take ganha a entrada 1; Virada perde a entrada 1 e ganha a entrada 2; Stop perde 2,2% da banca de referência.</div>
   </div>
 
   <div class="cards">
@@ -993,6 +993,8 @@ function classeDinheiro(v){
   return 'money-flat';
 }
 
+const STOP_PCT_SIM = 2.2;
+
 function calcularResultadoSim(resultado, bancaAtual, modo){
   if(modo==='lote'){
     const qtdLotes=numeroSim('simQtdLotes',1);
@@ -1003,9 +1005,10 @@ function calcularResultadoSim(resultado, bancaAtual, modo){
   const base=modo==='percentual' ? numeroSim('simBancaRef',10000) : bancaAtual;
   const entrada=base*(numeroSim('simPctEntrada',1)/100);
   const virada=base*(numeroSim('simPctVirada',1)/100);
+  const stop=base*(STOP_PCT_SIM/100);
   if(resultado==='Virada') return virada-entrada;
   if(resultado==='Take') return entrada;
-  return -(entrada+virada);
+  return -stop;
 }
 
 async function carregarSimulador(){
