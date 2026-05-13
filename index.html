@@ -46,6 +46,10 @@ header{position:relative;z-index:10;background:rgba(8,21,41,0.97);border-bottom:
 .tgbtn{background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:5px 12px;font-size:11px;font-family:'Barlow',sans-serif;cursor:pointer;transition:all .2s;}
 .tgbtn.active{background:rgba(201,168,76,0.15);color:var(--gold);border-color:rgba(201,168,76,0.5);}
 .tgbtn:hover:not(.active){border-color:var(--gold);color:var(--gold);}
+.asset-filter{display:flex;align-items:center;gap:6px;border:1px solid var(--border);border-radius:8px;padding:4px 8px;background:rgba(15,35,64,.72);}
+.asset-filter label{font-size:9px;color:var(--muted);letter-spacing:1.4px;text-transform:uppercase;}
+.asset-filter select{background:transparent;border:0;color:var(--text);font-size:11px;font-family:'Barlow',sans-serif;outline:none;min-width:116px;}
+.asset-filter option{background:var(--navy-md);color:var(--text);}
 
 /* MES NAV */
 .mes-nav{display:flex;align-items:center;gap:6px;}
@@ -71,6 +75,11 @@ main{position:relative;z-index:10;padding:24px 28px;max-width:1400px;margin:0 au
 .card.taxa .card-val,.card.melhor .card-val,.card.tend .card-val{color:var(--gold);}
 .tend-up{color:#4caf82!important;}
 .tend-down{color:#e05555!important;}
+.asset-insights{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:24px;}
+.insight-card{background:linear-gradient(145deg,rgba(18,36,68,.96),rgba(15,35,64,.86));border:1px solid var(--border);border-radius:12px;padding:14px 16px;min-height:82px;}
+.insight-label{font-size:9px;color:var(--gold);letter-spacing:1.6px;text-transform:uppercase;margin-bottom:8px;}
+.insight-main{font-family:'Barlow Condensed',sans-serif;font-size:26px;font-weight:600;line-height:1;color:var(--text);}
+.insight-sub{font-size:10px;color:var(--muted);margin-top:7px;}
 
 .section-title{font-size:10px;color:var(--gold);letter-spacing:2px;text-transform:uppercase;margin-bottom:14px;display:flex;align-items:center;gap:10px;}
 .section-title::after{content:'';flex:1;height:1px;background:var(--border);}
@@ -231,7 +240,13 @@ footer{position:relative;z-index:10;text-align:center;padding:16px;font-size:10p
       <button class="tgbtn active" onclick="mudarTG('H1M5',this)">H1M5</button>
       <button class="tgbtn" onclick="mudarTG('H1M1',this)">H1M1</button>
       <button class="tgbtn" onclick="mudarTG('H1M15',this)">H1M15</button>
-      <button class="tgbtn" onclick="mudarTG('19H',this)">19H</button>
+      <button class="tgbtn" onclick="mudarTG('19H',this)">ABERTURA</button>
+    </div>
+    <div class="asset-filter">
+      <label for="selAtivo">Ativo</label>
+      <select id="selAtivo" onchange="mudarAtivo(this.value)">
+        <option value="TODOS">Todos</option>
+      </select>
     </div>
     <!-- Mes Nav (só aparece na visão por mês) -->
     <div class="mes-nav" id="mesNav" style="display:none;">
@@ -268,13 +283,33 @@ footer{position:relative;z-index:10;text-align:center;padding:16px;font-size:10p
     <div class="card tend"><div class="card-label">Tendência</div><div class="card-val" id="gTend">—</div><div class="card-sub" id="gTendSub">vs mês anterior</div></div>
   </div>
 
+  <div class="asset-insights">
+    <div class="insight-card">
+      <div class="insight-label">Melhor Ativo</div>
+      <div class="insight-main" id="gMelhorAtivo">—</div>
+      <div class="insight-sub" id="gMelhorAtivoSub">mín. 10 operações</div>
+    </div>
+    <div class="insight-card">
+      <div class="insight-label">Melhor Ativo + Horário</div>
+      <div class="insight-main" id="gMelhorCombo">—</div>
+      <div class="insight-sub" id="gMelhorComboSub">maior assertividade combinada</div>
+    </div>
+    <div class="insight-card">
+      <div class="insight-label">Melhor Horário do Ativo</div>
+      <div class="insight-main" id="gMelhorHoraAtivo">—</div>
+      <div class="insight-sub" id="gMelhorHoraAtivoSub">conforme ativo selecionado</div>
+    </div>
+  </div>
+
   <div class="row-3">
     <div class="box">
       <div class="section-title">Evolução Mensal — Assertividade %</div>
       <div class="chart-wrap-lg"><canvas id="chartGeral"></canvas></div>
     </div>
     <div class="box">
-      <div class="section-title">Top 3 Horários (Geral)</div>
+      <div class="section-title">Top 3 Ativos</div>
+      <div id="gTopAtivosWrap"></div>
+      <div style="margin-top:16px;"><div class="section-title">Top 3 Horários</div></div>
       <div id="gTop3Wrap"></div>
       <div style="margin-top:16px;"><div class="section-title">Distribuição</div><div id="gDistWrap"></div></div>
     </div>
@@ -464,6 +499,7 @@ const MESES = ['','Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho',
 const DIAS_SEMANA = ['Dom','Seg','Ter','Qua','Qui','Sex','Sab'];
 let chartGeral = null, chartEv = null, chartSimulador = null, chartPizzaGeral = null;
 let tgAtual = 'H1M5';
+let ativoAtual = 'TODOS';
 let viewAtual = 'geral';
 let usuarioLogado = null;
 
@@ -487,6 +523,75 @@ async function supaFetch(path){
     inicio += lote;
   }
   return todos;
+}
+
+function labelHora(h){
+  return h==='19H' ? 'ABERTURA' : h;
+}
+
+function getAtivo(row){
+  return row.ativo || row.symbol || row.ticker || row.instrumento || row.par || 'XAUUSDm';
+}
+
+function filtrarAtivo(dados){
+  if(ativoAtual==='TODOS') return dados || [];
+  return (dados||[]).filter(d=>getAtivo(d)===ativoAtual);
+}
+
+function taxaStats(st){
+  const tot=st.t+st.s+st.v;
+  return tot>0 ? Math.round((st.t+st.v)/tot*100) : 0;
+}
+
+function statsPorAtivo(dados){
+  const map={};
+  (dados||[]).forEach(d=>{
+    const a=getAtivo(d);
+    if(!map[a]) map[a]={t:0,s:0,v:0};
+    if(d.resultado==='Take') map[a].t++;
+    if(d.resultado==='Stop') map[a].s++;
+    if(d.resultado==='Virada') map[a].v++;
+  });
+  return map;
+}
+
+function statsAtivoHora(dados){
+  const map={};
+  (dados||[]).forEach(d=>{
+    const a=getAtivo(d);
+    const h=d.horario;
+    const k=a+'||'+h;
+    if(!map[k]) map[k]={ativo:a,horario:h,t:0,s:0,v:0};
+    if(d.resultado==='Take') map[k].t++;
+    if(d.resultado==='Stop') map[k].s++;
+    if(d.resultado==='Virada') map[k].v++;
+  });
+  return map;
+}
+
+function ordenarStats(entries, minOps=10){
+  return entries.filter(x=>x.st.t+x.st.s+x.st.v>=minOps).sort((a,b)=>{
+    const pa=taxaStats(a.st), pb=taxaStats(b.st);
+    const ta=a.st.t+a.st.s+a.st.v, tb=b.st.t+b.st.s+b.st.v;
+    return pb-pa || tb-ta;
+  });
+}
+
+function atualizarFiltroAtivos(dados){
+  const sel=document.getElementById('selAtivo');
+  if(!sel) return;
+  const ativos=[...new Set((dados||[]).map(getAtivo))].sort();
+  const atual=ativoAtual;
+  sel.innerHTML='<option value="TODOS">Todos</option>'+ativos.map(a=>`<option value="${a}">${a}</option>`).join('');
+  if(atual!=='TODOS' && ativos.includes(atual)) sel.value=atual;
+  else { ativoAtual='TODOS'; sel.value='TODOS'; }
+}
+
+function mudarAtivo(ativo){
+  ativoAtual=ativo||'TODOS';
+  if(viewAtual==='geral') carregarGeral();
+  else if(viewAtual==='mes') carregarMes();
+  else carregarSimulador();
 }
 
 function voltarGeral(){
@@ -645,11 +750,26 @@ function renderTop3(sh, wrId, modo='melhor'){
     const valColor=isBad?'var(--stop)':'var(--gold)';
     return `<div class="rank-item">
       <div class="rank-num ${isBad?'r':cls}">${i+1}</div>
-      <div class="rank-hora">${h}</div>
+      <div class="rank-hora">${labelHora(h)}</div>
       <div class="rank-bar-wrap"><div class="rank-bar" style="width:${Math.round(pct/100/max*100)}%;background:${barColor};opacity:${isBad?.6:1}"></div></div>
       <div class="rank-stats"><span style="color:${valColor}">${pct}%</span><br/>${st.t}T · ${st.s}S</div>
     </div>`;
   }).join('');
+}
+
+function renderTopAtivos(dados, wrId){
+  const stats=statsPorAtivo(dados||[]);
+  const top=ordenarStats(Object.keys(stats).map(a=>({ativo:a,st:stats[a]})),1).slice(0,3);
+  document.getElementById(wrId).innerHTML=top.length?top.map((item,i)=>{
+    const st=item.st; const tot=st.t+st.s+st.v; const pct=taxaStats(st);
+    const cls=['g','s','b'][i];
+    return `<div class="rank-item">
+      <div class="rank-num ${cls}">${i+1}</div>
+      <div class="rank-hora">${item.ativo}</div>
+      <div class="rank-bar-wrap"><div class="rank-bar" style="width:${pct}%;"></div></div>
+      <div class="rank-stats"><span style="color:var(--gold)">${pct}%</span><br/>${tot} ops</div>
+    </div>`;
+  }).join(''):'<div class="empty-state" style="padding:10px 0;"><p>Sem ativos.</p></div>';
 }
 
 function renderDist(dados, wrId){
@@ -674,13 +794,13 @@ function renderHeatmap(sh, wrId){
   document.getElementById(wrId).innerHTML = horas.map(h=>{
     const st=sh[h]||{t:0,s:0,v:0};
     const tot=st.t+st.s+st.v;
-    if(tot===0) return `<div class="heat-cell"><div class="heat-hora">${h}</div><div class="heat-num" style="color:var(--muted);">—</div><div class="heat-tipo">sem dados</div></div>`;
+    if(tot===0) return `<div class="heat-cell"><div class="heat-hora">${labelHora(h)}</div><div class="heat-num" style="color:var(--muted);">—</div><div class="heat-tipo">sem dados</div></div>`;
     const pct=Math.round((st.t+st.v)/tot*100);
     const intensity=(pct/100)*0.8;
     const cls=pct>=75?'ht':'hs';
     const label=pct>=90?'Ótimo':pct>=80?'Bom':pct>=70?'Ok':'Ruim';
     return `<div class="heat-cell ${cls}" style="--intensity:${intensity}">
-      <div class="heat-hora">${h}</div>
+      <div class="heat-hora">${labelHora(h)}</div>
       <div class="heat-num">${pct}%</div>
       <div class="heat-tipo">${label}</div>
     </div>`;
@@ -693,7 +813,7 @@ function renderTop10Tabela(sh, bodyId){
     const st=sh[h]; const tot=st.t+st.s+st.v;
     const pct=Math.round((st.t+st.v)/tot*100);
     const numCor=i===0?'var(--gold)':i===1?'#8a9bb0':i===2?'#a0704a':'var(--muted)';
-    return `<tr><td style="color:${numCor};font-weight:700">${i+1}</td><td style="font-weight:600">${h}</td>
+    return `<tr><td style="color:${numCor};font-weight:700">${i+1}</td><td style="font-weight:600">${labelHora(h)}</td>
       <td><span class="badge Take">${st.t}</span></td><td><span class="badge Virada">${st.v}</span></td>
       <td><span class="badge Stop">${st.s}</span></td><td>${tot}</td>
       <td><div class="pct-bar"><div class="pct-mini"><div class="pct-mini-fill" style="width:${pct}%"></div></div>
@@ -706,7 +826,9 @@ async function carregarGeral(){
   document.getElementById('loadingWrap').style.display='flex';
   document.getElementById('viewGeral').style.display='none';
 
-  const dados = await supaFetch('/rest/v1/backtest?tempo_grafico=eq.'+tgAtual+'&select=*&order=data.asc');
+  const dadosTodos = await supaFetch('/rest/v1/backtest?tempo_grafico=eq.'+tgAtual+'&select=*&order=data.asc');
+  atualizarFiltroAtivos(dadosTodos);
+  const dados = filtrarAtivo(dadosTodos);
 
   document.getElementById('loadingWrap').style.display='none';
   document.getElementById('viewGeral').style.display='block';
@@ -714,8 +836,11 @@ async function carregarGeral(){
   if(!dados||dados.length===0){
     document.getElementById('gTotal').textContent='0';
     ['gTakes','gStops','gViradas','gTaxa','gTend'].forEach(id=>document.getElementById(id).textContent='—');
-    document.getElementById('gMeses').textContent='Nenhum dado para '+tgAtual;
+    document.getElementById('gMeses').textContent='Nenhum dado para '+tgAtual+' · '+(ativoAtual==='TODOS'?'Todos ativos':ativoAtual);
     document.getElementById('gTop10RecentesBody').innerHTML='<tr><td colspan="7" style="color:var(--muted);text-align:center;padding:16px;">Sem dados.</td></tr>';
+    ['gMelhorAtivo','gMelhorCombo','gMelhorHoraAtivo'].forEach(id=>document.getElementById(id).textContent='—');
+    ['gMelhorAtivoSub','gMelhorComboSub','gMelhorHoraAtivoSub'].forEach(id=>document.getElementById(id).textContent='Sem dados suficientes');
+    if(document.getElementById('gTopAtivosWrap')) renderTopAtivos(dadosTodos||[],'gTopAtivosWrap');
     if(chartPizzaGeral){chartPizzaGeral.destroy();chartPizzaGeral=null;}
     return;
   }
@@ -757,7 +882,7 @@ async function carregarGeral(){
 
   // Cards
   document.getElementById('gTotal').textContent=total;
-  document.getElementById('gMeses').textContent=mesesLista.length+' meses · '+tgAtual;
+  document.getElementById('gMeses').textContent=mesesLista.length+' meses · '+tgAtual+' · '+(ativoAtual==='TODOS'?'Todos ativos':ativoAtual);
   document.getElementById('gTakes').textContent=takes;
   document.getElementById('gTakesPct').textContent=Math.round(takes/total*100)+'% do total';
   document.getElementById('gStops').textContent=stops;
@@ -798,10 +923,43 @@ async function carregarGeral(){
 
   // Stats horário geral
   const sh=statsHora(dados);
+  renderTopAtivos(dadosTodos,'gTopAtivosWrap');
   renderTop3(sh,'gTop3Wrap','melhor');
   renderTop3(sh,'gPior3Wrap','pior');
   renderDist(dados,'gDistWrap');
   renderHeatmap(sh,'gHeatmapWrap');
+
+  const ativosStats=statsPorAtivo(dadosTodos||[]);
+  const melhorAtivo=ordenarStats(Object.keys(ativosStats).map(a=>({ativo:a,st:ativosStats[a]})))[0];
+  if(melhorAtivo){
+    const tot=melhorAtivo.st.t+melhorAtivo.st.s+melhorAtivo.st.v;
+    document.getElementById('gMelhorAtivo').textContent=melhorAtivo.ativo;
+    document.getElementById('gMelhorAtivoSub').textContent=taxaStats(melhorAtivo.st)+'% · '+tot+' ops';
+  }else{
+    document.getElementById('gMelhorAtivo').textContent='—';
+    document.getElementById('gMelhorAtivoSub').textContent='mín. 10 operações';
+  }
+
+  const comboStats=statsAtivoHora(dadosTodos||[]);
+  const melhorCombo=ordenarStats(Object.keys(comboStats).map(k=>({st:comboStats[k]})))[0];
+  if(melhorCombo){
+    const st=melhorCombo.st; const tot=st.t+st.s+st.v;
+    document.getElementById('gMelhorCombo').textContent=st.ativo+' · '+labelHora(st.horario);
+    document.getElementById('gMelhorComboSub').textContent=taxaStats(st)+'% · '+tot+' ops';
+  }else{
+    document.getElementById('gMelhorCombo').textContent='—';
+    document.getElementById('gMelhorComboSub').textContent='mín. 10 operações';
+  }
+
+  const melhorHora=horasOrdenadas(sh,'melhor')[0];
+  if(melhorHora){
+    const st=sh[melhorHora]; const tot=st.t+st.s+st.v;
+    document.getElementById('gMelhorHoraAtivo').textContent=labelHora(melhorHora);
+    document.getElementById('gMelhorHoraAtivoSub').textContent=taxaStats(st)+'% · '+tot+' ops · '+(ativoAtual==='TODOS'?'todos ativos':ativoAtual);
+  }else{
+    document.getElementById('gMelhorHoraAtivo').textContent='—';
+    document.getElementById('gMelhorHoraAtivoSub').textContent='Sem dados suficientes';
+  }
 
   // Dias da semana
   const diasStats={1:{t:0,s:0,v:0},2:{t:0,s:0,v:0},3:{t:0,s:0,v:0},4:{t:0,s:0,v:0},5:{t:0,s:0,v:0}};
@@ -872,16 +1030,17 @@ async function carregarMes(){
   const ano=parseInt(document.getElementById('selAno').value);
   const mesNome=MESES[parseInt(mes)]+'/'+ano;
 
-  const dados=await supaFetch('/rest/v1/backtest?mes=eq.'+encodeURIComponent(mesNome)+'&tempo_grafico=eq.'+tgAtual+'&order=data.asc,horario.asc&select=*');
+  const dadosTodos=await supaFetch('/rest/v1/backtest?mes=eq.'+encodeURIComponent(mesNome)+'&tempo_grafico=eq.'+tgAtual+'&order=data.asc,horario.asc&select=*');
+  const dados=filtrarAtivo(dadosTodos);
 
   document.getElementById('loadingWrap').style.display='none';
   document.getElementById('viewMes').style.display='block';
 
   if(!dados||dados.length===0){
     document.getElementById('cTotal').textContent='0';
-    document.getElementById('cPeriodo').textContent=mesNome+' · '+tgAtual;
+    document.getElementById('cPeriodo').textContent=mesNome+' · '+tgAtual+' · '+(ativoAtual==='TODOS'?'Todos ativos':ativoAtual);
     ['cTakes','cStops','cViradas','cTaxa','cMelhor'].forEach(id=>document.getElementById(id).textContent='—');
-    document.getElementById('calWrap').innerHTML='<div class="empty-state"><p>Nenhum dado para '+mesNome+' ('+tgAtual+')</p></div>';
+    document.getElementById('calWrap').innerHTML='<div class="empty-state"><p>Nenhum dado para '+mesNome+' ('+tgAtual+' · '+(ativoAtual==='TODOS'?'Todos ativos':ativoAtual)+')</p></div>';
     ['top3Wrap','pior3Wrap','distWrap','top10Body','heatmapWrap'].forEach(id=>document.getElementById(id).innerHTML='');
     return;
   }
@@ -898,7 +1057,7 @@ async function carregarMes(){
   const melhorPct=melhor!=='—'?Math.round((sh[melhor].t+sh[melhor].v)/(sh[melhor].t+sh[melhor].s+sh[melhor].v)*100):0;
 
   document.getElementById('cTotal').textContent=total;
-  document.getElementById('cPeriodo').textContent=mesNome+' · '+tgAtual;
+  document.getElementById('cPeriodo').textContent=mesNome+' · '+tgAtual+' · '+(ativoAtual==='TODOS'?'Todos ativos':ativoAtual);
   document.getElementById('cTakes').textContent=takes;
   document.getElementById('cTakesPct').textContent=Math.round(takes/total*100)+'% do total';
   document.getElementById('cStops').textContent=stops;
@@ -906,7 +1065,7 @@ async function carregarMes(){
   document.getElementById('cViradas').textContent=viradas;
   document.getElementById('cViradasPct').textContent=Math.round(viradas/total*100)+'% do total';
   document.getElementById('cTaxa').textContent=taxa+'%';
-  document.getElementById('cMelhor').textContent=melhor;
+  document.getElementById('cMelhor').textContent=labelHora(melhor);
   document.getElementById('cMelhorSub').textContent=melhor!=='—'?melhorPct+'% — '+sh[melhor].t+'T':'—';
 
   renderTop3(sh,'top3Wrap','melhor');
@@ -927,7 +1086,7 @@ async function carregarMes(){
     dias.push(dt);
   }
   let calHtml='<div class="cal-grid"><div class="cal-hdr"></div>';
-  HORAS_DASH.forEach(h=>calHtml+='<div class="cal-hdr">'+h+'</div>');
+  HORAS_DASH.forEach(h=>calHtml+='<div class="cal-hdr">'+labelHora(h)+'</div>');
   dias.forEach(dt=>{
     const p=dt.split('-');
     calHtml+='<div class="cal-date">'+p[2]+'/'+p[1]+'</div>';
@@ -948,7 +1107,8 @@ async function carregarMes(){
     let m2=parseInt(mes)-i,a2=ano;
     if(m2<=0){m2+=12;a2--;}
     const mn2=MESES[m2]+'/'+a2;
-    const d2=await supaFetch('/rest/v1/backtest?mes=eq.'+encodeURIComponent(mn2)+'&tempo_grafico=eq.'+tgAtual+'&select=resultado');
+    const d2Todos=await supaFetch('/rest/v1/backtest?mes=eq.'+encodeURIComponent(mn2)+'&tempo_grafico=eq.'+tgAtual+'&select=*');
+    const d2=filtrarAtivo(d2Todos);
     const tot=d2?d2.length:0;
     const ac=d2?d2.filter(d=>d.resultado==='Take'||d.resultado==='Virada').length:0;
     labels6.push(MESES[m2].slice(0,3)+'/'+String(a2).slice(2));
@@ -974,7 +1134,7 @@ function numeroSim(id, padrao=0){
 function initHorasSimulador(){
   const wrap=document.getElementById('simHorasWrap');
   if(!wrap || wrap.children.length>0) return;
-  wrap.innerHTML=HORAS.map((h,i)=>`<label class="hour-chip"><input type="checkbox" value="${h}" ${i===9?'checked':''}/><span>${h}</span></label>`).join('');
+  wrap.innerHTML=HORAS.map((h,i)=>`<label class="hour-chip"><input type="checkbox" value="${h}" ${i===9?'checked':''}/><span>${labelHora(h)}</span></label>`).join('');
 }
 
 function horasSelecionadasSim(){
@@ -1033,7 +1193,7 @@ async function carregarSimulador(){
 
   const dadosBrutos=await supaFetch(url);
   const horas=horasSelecionadasSim();
-  const dados=(dadosBrutos||[]).filter(d=>horas.includes(d.horario)).sort((a,b)=>{
+  const dados=filtrarAtivo(dadosBrutos||[]).filter(d=>horas.includes(d.horario)).sort((a,b)=>{
     const da=(a.data||'')+' '+(a.horario||'');
     const db=(b.data||'')+' '+(b.horario||'');
     return da.localeCompare(db);
@@ -1042,7 +1202,7 @@ async function carregarSimulador(){
   document.getElementById('loadingWrap').style.display='none';
   document.getElementById('viewSimulador').style.display='block';
 
-  const filtroTxt=(periodo==='mes'?mesNome:'Todo histórico')+' · '+tgAtual+' · '+(horas.length||0)+' horário(s)';
+  const filtroTxt=(periodo==='mes'?mesNome:'Todo histórico')+' · '+tgAtual+' · '+(ativoAtual==='TODOS'?'Todos ativos':ativoAtual)+' · '+(horas.length||0)+' horário(s)';
   document.getElementById('simFiltroTxt').textContent=filtroTxt;
   document.getElementById('simContexto').textContent='Simulando '+filtroTxt+'. Resultados financeiros exibidos sempre em dólar.';
 
@@ -1111,7 +1271,7 @@ async function carregarSimulador(){
     <tr>
       <td>${l.idx}</td>
       <td>${l.op.data}</td>
-      <td>${l.op.horario}</td>
+      <td>${labelHora(l.op.horario)}</td>
       <td><span class="badge ${l.op.resultado}">${l.op.resultado}</span></td>
       <td>${modo==='lote'?l.lote.toFixed(2):'—'}</td>
       <td class="${classeDinheiro(l.valor)}">${moeda(l.valor)}</td>
