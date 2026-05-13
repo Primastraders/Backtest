@@ -303,7 +303,7 @@ footer{position:relative;z-index:10;text-align:center;padding:16px;font-size:10p
 
   <div class="row-3">
     <div class="box">
-      <div class="section-title">Evolução Mensal — Assertividade %</div>
+      <div class="section-title" id="gEvolucaoTitle">Evolução Mensal — Assertividade por Ativo</div>
       <div class="chart-wrap-lg"><canvas id="chartGeral"></canvas></div>
     </div>
     <div class="box">
@@ -322,7 +322,7 @@ footer{position:relative;z-index:10;text-align:center;padding:16px;font-size:10p
 
   <div class="row-2">
     <div class="box">
-      <div class="section-title">Distribuição — Take, Stop e Virada</div>
+      <div class="section-title" id="gPizzaTitle">Distribuição por Ativo</div>
       <div class="chart-wrap-pie"><canvas id="chartPizzaGeral"></canvas></div>
     </div>
     <div class="box">
@@ -551,6 +551,20 @@ function statsPorAtivo(dados){
     if(d.resultado==='Take') map[a].t++;
     if(d.resultado==='Stop') map[a].s++;
     if(d.resultado==='Virada') map[a].v++;
+  });
+  return map;
+}
+
+function agruparMesAtivo(dados){
+  const map={};
+  (dados||[]).forEach(d=>{
+    const m=d.mes;
+    const a=getAtivo(d);
+    if(!map[m]) map[m]={};
+    if(!map[m][a]) map[m][a]={t:0,s:0,v:0};
+    if(d.resultado==='Take') map[m][a].t++;
+    if(d.resultado==='Stop') map[m][a].s++;
+    if(d.resultado==='Virada') map[m][a].v++;
   });
   return map;
 }
@@ -921,19 +935,35 @@ async function carregarGeral(){
   tendEl.className='card-val '+tendCls;
 
   // Gráfico evolução
+  document.getElementById('gEvolucaoTitle').textContent=ativoAtual==='TODOS'?'Evolução Mensal — Top 3 Ativos':'Evolução Mensal — '+ativoAtual;
   const labels=mesesLista.map(m=>m.replace('/','/').split('/')[0].slice(0,3)+'/'+m.split('/')[1].slice(2));
   const taxas=mesesLista.map(m=>{
     const ms=porMes[m]; const tot=ms.takes+ms.stops+ms.viradas;
     return tot>0?Math.round((ms.takes+ms.viradas)/tot*100):0;
   });
+  let datasetsEvolucao=[{label:'Assertividade %',data:taxas,backgroundColor:taxas.map(t=>t>=80?'rgba(201,168,76,0.7)':t>=70?'rgba(201,168,76,0.4)':'rgba(224,85,85,0.4)'),borderColor:taxas.map(t=>t>=80?'#c9a84c':t>=70?'rgba(201,168,76,0.6)':'#e05555'),borderWidth:1,borderRadius:4}];
+  if(ativoAtual==='TODOS'){
+    const topAtivos=ordenarStats(Object.entries(statsPorAtivo(dadosTodos||[])).map(([ativo,st])=>({ativo,st})),1).slice(0,3);
+    const porMesAtivo=agruparMesAtivo(dadosTodos||[]);
+    const cores=['#c9a84c','#8a9bb0','#b86a62'];
+    datasetsEvolucao=topAtivos.map((item,i)=>({
+      label:item.ativo,
+      data:mesesLista.map(m=>{
+        const st=porMesAtivo[m]&&porMesAtivo[m][item.ativo];
+        return st?taxaStats(st):0;
+      }),
+      backgroundColor:cores[i]+'88',
+      borderColor:cores[i],
+      borderWidth:1,
+      borderRadius:4
+    }));
+  }
   if(chartGeral){chartGeral.destroy();}
   const ctx=document.getElementById('chartGeral').getContext('2d');
   chartGeral=new Chart(ctx,{
     type:'bar',
-    data:{labels,datasets:[
-      {label:'Assertividade %',data:taxas,backgroundColor:taxas.map(t=>t>=80?'rgba(201,168,76,0.7)':t>=70?'rgba(201,168,76,0.4)':'rgba(224,85,85,0.4)'),borderColor:taxas.map(t=>t>=80?'#c9a84c':t>=70?'rgba(201,168,76,0.6)':'#e05555'),borderWidth:1,borderRadius:4}
-    ]},
-    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{
+    data:{labels,datasets:datasetsEvolucao},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:ativoAtual==='TODOS',labels:{color:'#e0e0e0',font:{size:10},boxWidth:10,boxHeight:10}}},scales:{
       x:{ticks:{color:'#7a9ab8',font:{size:9}},grid:{color:'rgba(201,168,76,0.05)'}},
       y:{ticks:{color:'#7a9ab8',font:{size:9},callback:v=>v+'%'},grid:{color:'rgba(201,168,76,0.05)'},min:0,max:100}
     }}
@@ -941,9 +971,19 @@ async function carregarGeral(){
 
   if(chartPizzaGeral){chartPizzaGeral.destroy();}
   const ctxPizza=document.getElementById('chartPizzaGeral').getContext('2d');
+  let pizzaLabels=['Take','Virada','Stop'];
+  let pizzaData=[takes,viradas,stops];
+  let pizzaColors=['#c9a84c','#e0c06e','#b86a62'];
+  document.getElementById('gPizzaTitle').textContent=ativoAtual==='TODOS'?'Distribuição por Ativo':'Distribuição — Take, Stop e Virada';
+  if(ativoAtual==='TODOS'){
+    const ativosDist=Object.entries(statsPorAtivo(dadosTodos||[])).map(([ativo,st])=>({ativo,st,total:st.t+st.s+st.v})).sort((a,b)=>b.total-a.total);
+    pizzaLabels=ativosDist.map(x=>x.ativo);
+    pizzaData=ativosDist.map(x=>x.total);
+    pizzaColors=['#c9a84c','#8a9bb0','#b86a62','#6f5aa8','#4caf82','#4a9fe0','#e0c06e','#7a9ab8'];
+  }
   chartPizzaGeral=new Chart(ctxPizza,{
     type:'doughnut',
-    data:{labels:['Take','Virada','Stop'],datasets:[{data:[takes,viradas,stops],backgroundColor:['#c9a84c','#e0c06e','#b86a62'],borderColor:'#0f2340',borderWidth:2,hoverOffset:6}]},
+    data:{labels:pizzaLabels,datasets:[{data:pizzaData,backgroundColor:pizzaColors,borderColor:'#0f2340',borderWidth:2,hoverOffset:6}]},
     options:{responsive:true,maintainAspectRatio:false,cutout:'58%',plugins:{legend:{position:'bottom',labels:{color:'#e0e0e0',font:{size:11},boxWidth:10,boxHeight:10}},tooltip:{callbacks:{label:ctx=>ctx.label+': '+ctx.raw+' ops'}}}}
   });
 
