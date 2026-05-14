@@ -362,7 +362,7 @@ footer{position:relative;z-index:10;text-align:center;padding:16px;font-size:10p
   </div>
 
   <div class="month-stack">
-    <div class="box calendar-box">
+    <div class="box calendar-box" id="monthCalendarBox">
       <div class="section-title">Calendário de Resultados</div>
       <div id="calWrap"></div>
     </div>
@@ -1092,6 +1092,7 @@ async function carregarMes(){
     document.getElementById('cTotal').textContent='0';
     document.getElementById('cPeriodo').textContent=mesNome+' · '+tgAtual+' · '+(ativoAtual==='TODOS'?'Todos ativos':ativoAtual);
     ['cTakes','cStops','cViradas','cTaxa','cMelhor'].forEach(id=>document.getElementById(id).textContent='—');
+    document.getElementById('monthCalendarBox').style.display=ativoAtual==='TODOS'?'none':'block';
     document.getElementById('calWrap').innerHTML='<div class="empty-state"><p>Nenhum dado para '+mesNome+' ('+tgAtual+' · '+(ativoAtual==='TODOS'?'Todos ativos':ativoAtual)+')</p></div>';
     ['top3Wrap','pior3Wrap','distWrap','top10Body','heatmapWrap'].forEach(id=>document.getElementById(id).innerHTML='');
     return;
@@ -1125,48 +1126,36 @@ async function carregarMes(){
   renderDist(dados,'distWrap');
   renderHeatmap(sh,'heatmapWrap');
 
-  // Calendário
-  const mapa={};
-  dados.forEach(d=>{
-    const key=d.data+'_'+d.horario;
-    if(!mapa[key]) mapa[key]=[];
-    mapa[key].push(d);
-  });
-  const datasComDados=new Set(dados.map(d=>d.data));
-  const diasNoMes=new Date(ano,parseInt(mes),0).getDate();
-  const dias=[];
-  for(let d=1;d<=diasNoMes;d++){
-    const dt=ano+'-'+mes+'-'+String(d).padStart(2,'0');
-    const dow=new Date(dt+'T12:00:00').getDay();
-    if((dow===0||dow===6)&&!datasComDados.has(dt)) continue;
-    dias.push(dt);
-  }
-  let calHtml='<div class="cal-grid"><div class="cal-hdr"></div>';
-  HORAS_DASH.forEach(h=>calHtml+='<div class="cal-hdr">'+labelHora(h)+'</div>');
-  dias.forEach(dt=>{
-    const p=dt.split('-');
-    calHtml+='<div class="cal-date">'+p[2]+'/'+p[1]+'</div>';
-    HORAS_DASH.forEach(h=>{
-      const vals=mapa[dt+'_'+h]||[];
-      if(vals.length===0){
-        calHtml+='<div class="cal-cell empty"></div>';
-        return;
-      }
-      if(ativoAtual==='TODOS'){
-        const classe=vals.length>1?'multi':vals[0].resultado;
-        const ativos=[...new Set(vals.map(v=>ativoCurto(v.ativo)))];
-        const ativosTxt=ativos.slice(0,2).join('+')+(ativos.length>2?'+':'');
-        const resTxt=vals.length>1?resumoResultados(vals):vals[0].resultado;
-        const title=vals.map(v=>(v.ativo||'—')+' · '+v.resultado).join(' | ');
-        calHtml+='<div class="cal-cell '+classe+'" title="'+title+'"><span class="cal-asset">'+ativosTxt+'</span><small>'+resTxt+'</small></div>';
-      }else{
-        const val=vals[0].resultado;
-        calHtml+='<div class="cal-cell '+val+'">'+val+'</div>';
-      }
+  // Calendário: aparece só quando há um ativo específico selecionado.
+  const calendarBox=document.getElementById('monthCalendarBox');
+  calendarBox.style.display=ativoAtual==='TODOS'?'none':'block';
+  if(ativoAtual!=='TODOS'){
+    const mapa={};
+    dados.forEach(d=>mapa[d.data+'_'+d.horario]=d.resultado);
+    const datasComDados=new Set(dados.map(d=>d.data));
+    const diasNoMes=new Date(ano,parseInt(mes),0).getDate();
+    const dias=[];
+    for(let d=1;d<=diasNoMes;d++){
+      const dt=ano+'-'+mes+'-'+String(d).padStart(2,'0');
+      const dow=new Date(dt+'T12:00:00').getDay();
+      if((dow===0||dow===6)&&!datasComDados.has(dt)) continue;
+      dias.push(dt);
+    }
+    let calHtml='<div class="cal-grid"><div class="cal-hdr"></div>';
+    HORAS_DASH.forEach(h=>calHtml+='<div class="cal-hdr">'+labelHora(h)+'</div>');
+    dias.forEach(dt=>{
+      const p=dt.split('-');
+      calHtml+='<div class="cal-date">'+p[2]+'/'+p[1]+'</div>';
+      HORAS_DASH.forEach(h=>{
+        const val=mapa[dt+'_'+h]||'';
+        calHtml+='<div class="cal-cell '+(val||'empty')+'">'+(val||'')+'</div>';
+      });
     });
-  });
-  calHtml+='</div>';
-  document.getElementById('calWrap').innerHTML=calHtml;
+    calHtml+='</div>';
+    document.getElementById('calWrap').innerHTML=calHtml;
+  }else{
+    document.getElementById('calWrap').innerHTML='';
+  }
 
   // Top 10
   if(ativoAtual==='TODOS'){
