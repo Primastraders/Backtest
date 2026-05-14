@@ -234,9 +234,8 @@ footer{position:relative;z-index:10;text-align:center;padding:16px;font-size:10p
     <button class="logout-btn" onclick="logoutDashboard()">Sair</button>
     <!-- View Tabs -->
     <div class="view-tabs">
-      <button class="vtab active" onclick="mudarView('geral',this)">Visão Geral</button>
-      <button class="vtab" onclick="mudarView('mes',this)">Por Mês</button>
-      <button class="vtab" onclick="mudarView('simulador',this)">Simulador</button>
+      <button class="vtab active" id="btnViewGeral" onclick="mudarView('geral',this)">Visão Geral</button>
+      <button class="vtab" id="btnViewSimulador" onclick="mudarView('simulador',this)">Simulador</button>
     </div>
     <!-- TG Filter -->
     <div class="tg-filter" id="tgFilter">
@@ -252,6 +251,7 @@ footer{position:relative;z-index:10;text-align:center;padding:16px;font-size:10p
         <option value="TODOS">Todos</option>
       </select>
     </div>
+    <button class="vtab" id="btnViewMes" onclick="mudarView('mes',this)">Por Mês</button>
     <!-- Mes Nav (só aparece na visão por mês) -->
     <div class="mes-nav" id="mesNav" style="display:none;">
       <button onclick="navMes(-1)">&#8592;</button>
@@ -608,7 +608,7 @@ function mudarAtivo(ativo){
 }
 
 function voltarGeral(){
-  const btnGeral=document.querySelectorAll('.vtab')[0];
+  const btnGeral=document.getElementById('btnViewGeral');
   mudarView('geral',btnGeral);
 }
 
@@ -1069,7 +1069,7 @@ function abrirMes(mesNome){
     document.getElementById('selAno').value = ano;
   }
   // Troca para visão mês
-  const btnMes = document.querySelectorAll('.vtab')[1];
+  const btnMes = document.getElementById('btnViewMes');
   mudarView('mes', btnMes);
 }
 
