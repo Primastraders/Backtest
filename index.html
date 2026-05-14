@@ -795,6 +795,25 @@ function renderRankingAtivos(dados, bodyId){
   }).join(''):'<tr><td colspan="7" style="color:var(--muted);text-align:center;padding:16px;">Sem ativos.</td></tr>';
 }
 
+function renderDist(dados, wrId){
+  const t=dados.filter(d=>d.resultado==='Take').length;
+  const s=dados.filter(d=>d.resultado==='Stop').length;
+  const v=dados.filter(d=>d.resultado==='Virada').length;
+  const tot=dados.length;
+  document.getElementById(wrId).innerHTML = [
+    {label:'Take',val:t,cor:'var(--take)'},
+    {label:'Virada',val:v,cor:'var(--virada)'},
+    {label:'Stop',val:s,cor:'var(--stop)'}
+  ].map(({label,val,cor})=>`
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+      <div style="font-size:11px;min-width:50px;color:${cor}">${label}</div>
+      <div style="flex:1;height:9px;background:rgba(255,255,255,0.06);border-radius:5px;overflow:hidden;">
+        <div style="width:${tot>0?Math.round(val/tot*100):0}%;height:100%;background:${cor};border-radius:5px;"></div>
+      </div>
+      <div style="font-size:11px;font-weight:600;min-width:26px;text-align:right;color:${cor}">${val}</div>
+    </div>`).join('');
+}
+
 function renderHeatmap(sh, wrId){
   const horas = HORAS_DASH;
   document.getElementById(wrId).innerHTML = horas.map(h=>{
