@@ -245,13 +245,13 @@ footer{position:relative;z-index:10;text-align:center;padding:16px;font-size:10p
       <button class="tgbtn" onclick="mudarTG('H1M5',this)">H1M5</button>
       <button class="tgbtn" onclick="mudarTG('H1M15',this)">H1M15</button>
     </div>
+    <button class="vtab" id="btnViewMes" onclick="mudarView('mes',this)">Por Mês</button>
     <div class="asset-filter">
       <label for="selAtivo">Ativo</label>
       <select id="selAtivo" onchange="mudarAtivo(this.value)">
         <option value="TODOS">Todos</option>
       </select>
     </div>
-    <button class="vtab" id="btnViewMes" onclick="mudarView('mes',this)">Por Mês</button>
     <!-- Mes Nav (só aparece na visão por mês) -->
     <div class="mes-nav" id="mesNav" style="display:none;">
       <button onclick="navMes(-1)">&#8592;</button>
@@ -856,9 +856,11 @@ function renderTop10AtivoHoraTabela(dados, bodyId, modo='melhor'){
   }).sort((a,b)=>{
     const ta=a.st.t+a.st.s+a.st.v;
     const tb=b.st.t+b.st.s+b.st.v;
+    const stopRateA=ta>0?a.st.s/ta:0;
+    const stopRateB=tb>0?b.st.s/tb:0;
     return modo==='pior'
-      ? taxaStats(a.st)-taxaStats(b.st) || tb-ta
-      : taxaStats(b.st)-taxaStats(a.st) || tb-ta;
+      ? b.st.s-a.st.s || stopRateB-stopRateA || tb-ta
+      : taxaStats(b.st)-taxaStats(a.st) || a.st.s-b.st.s || tb-ta;
   }).slice(0,10);
 
   document.getElementById(bodyId).innerHTML=linhas.length?linhas.map((h,i)=>{
@@ -955,7 +957,7 @@ async function carregarGeral(){
   // Cards
   document.getElementById('gTotal').textContent=total;
   document.getElementById('gMeses').textContent=mesesLista.length+' meses · '+tgAtual+' · '+escopoTxt;
-  document.getElementById('gTop10Title').textContent=ativoAtual==='TODOS'?'Top 10 Melhores Ativo/Horário':'Top 10 Melhores Horários — '+ativoAtual;
+  document.getElementById('gTop10Title').textContent=ativoAtual==='TODOS'?'Top 10 Melhores Ativo/Horário — Histórico':'Top 10 Melhores Horários — '+ativoAtual+' — Histórico';
   document.getElementById('gHeatmapTitle').textContent=ativoAtual==='TODOS'?'Horários Gerais':'Horários — '+ativoAtual;
   document.getElementById('gTakes').textContent=takes;
   document.getElementById('gTakesPct').textContent=Math.round(takes/total*100)+'% do total';
@@ -1031,10 +1033,8 @@ async function carregarGeral(){
     </div>`;
   }).join('');
 
-  const ultimosDoisMeses=mesesLista.slice(-2);
-  const dadosRecentes=dados.filter(d=>ultimosDoisMeses.includes(d.mes));
-  renderTop10AtivoHoraTabela(dadosRecentes,'gTop10RecentesBody','melhor');
-  renderTop10AtivoHoraTabela(dadosRecentes,'gPior10Body','pior');
+  renderTop10AtivoHoraTabela(dados,'gTop10RecentesBody','melhor');
+  renderTop10AtivoHoraTabela(dados,'gPior10Body','pior');
 
   // Tabela de meses
   const mesesSection=document.getElementById('gMesesSection');
