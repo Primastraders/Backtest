@@ -117,14 +117,14 @@ main{position:relative;z-index:10;padding:24px 28px;max-width:1400px;margin:0 au
 .rank-stats span{color:var(--gold);font-weight:600;}
 
 /* HEATMAP */
-.heatmap{display:grid;grid-template-columns:repeat(12,1fr);gap:4px;}
-.heat-cell{background:var(--navy-lt);border-radius:6px;padding:6px 3px;text-align:center;position:relative;overflow:hidden;}
+.heatmap{display:grid;grid-template-columns:repeat(6,minmax(54px,1fr));gap:6px;}
+.heat-cell{background:var(--navy-lt);border-radius:6px;padding:8px 6px;text-align:center;position:relative;overflow:hidden;min-height:44px;}
 .heat-cell::before{content:'';position:absolute;inset:0;border-radius:7px;opacity:var(--intensity,0);}
 .heat-cell.ht::before{background:var(--take);}
 .heat-cell.hs::before{background:var(--stop);}
 .heat-hora{font-size:9px;color:var(--gold);font-weight:600;position:relative;z-index:1;}
-.heat-num{font-size:11px;font-weight:700;position:relative;z-index:1;margin:1px 0;}
-.heat-tipo{font-size:7px;color:var(--muted);position:relative;z-index:1;text-transform:uppercase;letter-spacing:.5px;}
+.heat-num{font-size:13px;font-weight:700;position:relative;z-index:1;margin:2px 0;}
+.heat-tipo{font-size:8px;color:var(--muted);position:relative;z-index:1;text-transform:uppercase;letter-spacing:.5px;}
 .heatmap-vertical{grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;}
 .heatmap-vertical .heat-cell{display:grid;grid-template-columns:42px 58px 1fr;align-items:center;text-align:left;padding:8px 10px;min-height:34px;}
 .heatmap-vertical .heat-hora{font-size:11px;}
@@ -280,7 +280,7 @@ footer{position:relative;z-index:10;text-align:center;padding:16px;font-size:10p
     <div class="card take"><div class="card-label">Takes</div><div class="card-val" id="gTakes">—</div><div class="card-sub" id="gTakesPct">—</div></div>
     <div class="card stop"><div class="card-label">Stops</div><div class="card-val" id="gStops">—</div><div class="card-sub" id="gStopsPct">—</div></div>
     <div class="card virada"><div class="card-label">Viradas</div><div class="card-val" id="gViradas">—</div><div class="card-sub" id="gViradasPct">—</div></div>
-    <div class="card taxa"><div class="card-label">Taxa Acerto</div><div class="card-val" id="gTaxa">—</div><div class="card-sub">Take + Virada</div></div>
+    <div class="card taxa"><div class="card-label">Taxa do Método</div><div class="card-val" id="gTaxa">—</div><div class="card-sub">Take + Virada</div></div>
     <div class="card tend"><div class="card-label">Tendência</div><div class="card-val" id="gTend">—</div><div class="card-sub" id="gTendSub">vs mês anterior</div></div>
   </div>
 
@@ -296,56 +296,51 @@ footer{position:relative;z-index:10;text-align:center;padding:16px;font-size:10p
       <div class="insight-sub" id="gMelhorComboSub">maior assertividade combinada</div>
     </div>
     <div class="insight-card">
-      <div class="insight-label">Melhor Horário do Ativo</div>
-      <div class="insight-main" id="gMelhorHoraAtivo">—</div>
-      <div class="insight-sub" id="gMelhorHoraAtivoSub">conforme ativo selecionado</div>
-    </div>
-  </div>
-
-  <div class="row-3">
-    <div class="box">
-      <div class="section-title" id="gEvolucaoTitle">Evolução Mensal — Assertividade por Ativo</div>
-      <div class="chart-wrap-lg"><canvas id="chartGeral"></canvas></div>
-    </div>
-    <div class="box">
-      <div class="section-title">Top 3 Ativos</div>
-      <div id="gTopAtivosWrap"></div>
-      <div style="margin-top:16px;"><div class="section-title">Top 3 Horários</div></div>
-      <div id="gTop3Wrap"></div>
-      <div style="margin-top:16px;"><div class="section-title">Distribuição</div><div id="gDistWrap"></div></div>
-    </div>
-    <div class="box">
-      <div class="section-title">Dias da Semana</div>
-      <div class="dias-grid" id="gDiasWrap"></div>
-      <div style="margin-top:16px;"><div class="section-title">Pior 3 Horários</div><div id="gPior3Wrap"></div></div>
+      <div class="insight-label">Pior Ativo + Horário</div>
+      <div class="insight-main" id="gPiorCombo">—</div>
+      <div class="insight-sub" id="gPiorComboSub">maior risco recorrente</div>
     </div>
   </div>
 
   <div class="row-2">
     <div class="box">
-      <div class="section-title" id="gPizzaTitle">Distribuição por Ativo</div>
-      <div class="chart-wrap-pie"><canvas id="chartPizzaGeral"></canvas></div>
+      <div class="section-title">Ranking de Ativos</div>
+      <table class="top-table">
+        <thead><tr><th>#</th><th>Ativo</th><th>Takes</th><th>Viradas</th><th>Stops</th><th>Total</th><th>Assertividade</th></tr></thead>
+        <tbody id="gRankingAtivosBody"></tbody>
+      </table>
     </div>
     <div class="box">
-      <div class="section-title" id="gTop10Title">Top 10 Ativo/Horário — Últimos 2 Meses</div>
+      <div class="section-title">Dias da Semana</div>
+      <div class="dias-grid" id="gDiasWrap"></div>
+      <div style="margin-top:16px;"><div class="section-title" id="gHeatmapTitle">Horários Gerais</div><div class="heatmap" id="gHeatmapWrap"></div></div>
+    </div>
+  </div>
+
+  <div class="row-2">
+    <div class="box">
+      <div class="section-title" id="gTop10Title">Top 10 Melhores Ativo/Horário</div>
       <table class="top-table">
         <thead><tr><th>#</th><th>Ativo</th><th>Hora</th><th>Takes</th><th>Viradas</th><th>Stops</th><th>Total</th><th>Assertividade</th></tr></thead>
         <tbody id="gTop10RecentesBody"></tbody>
       </table>
     </div>
+    <div class="box">
+      <div class="section-title">Top 10 Piores Ativo/Horário</div>
+      <table class="top-table">
+        <thead><tr><th>#</th><th>Ativo</th><th>Hora</th><th>Takes</th><th>Viradas</th><th>Stops</th><th>Total</th><th>Assertividade</th></tr></thead>
+        <tbody id="gPior10Body"></tbody>
+      </table>
+    </div>
   </div>
 
-  <div class="row-2">
+  <div class="row-2" id="gMesesSection">
     <div class="box">
-      <div class="section-title" id="gMesesTitle">Todos os Meses — Clique para detalhar</div>
+      <div class="section-title" id="gMesesTitle">Todos os Meses</div>
       <table class="meses-table">
         <thead><tr><th>Mês</th><th>TG</th><th>Takes</th><th>Viradas</th><th>Stops</th><th>Total</th><th>Assertividade</th></tr></thead>
         <tbody id="mesesBody"></tbody>
       </table>
-    </div>
-    <div class="box">
-      <div class="section-title" id="gHeatmapTitle">Heatmap de Horários / Ativo</div>
-      <div class="heatmap" id="gHeatmapWrap"></div>
     </div>
   </div>
 </main>
@@ -779,69 +774,66 @@ function renderTop3(sh, wrId, modo='melhor'){
   }).join('');
 }
 
-function renderTopAtivos(dados, wrId){
+function renderRankingAtivos(dados, bodyId){
   const stats=statsPorAtivo(dados||[]);
-  const top=ordenarStats(Object.keys(stats).map(a=>({ativo:a,st:stats[a]})),1).slice(0,3);
-  document.getElementById(wrId).innerHTML=top.length?top.map((item,i)=>{
-    const st=item.st; const tot=st.t+st.s+st.v; const pct=taxaStats(st);
-    const cls=['g','s','b'][i];
-    return `<div class="rank-item">
-      <div class="rank-num ${cls}">${i+1}</div>
-      <div class="rank-hora">${item.ativo}</div>
-      <div class="rank-bar-wrap"><div class="rank-bar" style="width:${pct}%;"></div></div>
-      <div class="rank-stats"><span style="color:var(--gold)">${pct}%</span><br/>${tot} ops</div>
-    </div>`;
-  }).join(''):'<div class="empty-state" style="padding:10px 0;"><p>Sem ativos.</p></div>';
+  const linhas=Object.keys(stats).map(ativo=>({ativo,st:stats[ativo]}))
+    .sort((a,b)=>taxaStats(b.st)-taxaStats(a.st) || (b.st.t+b.st.s+b.st.v)-(a.st.t+a.st.s+a.st.v));
+
+  document.getElementById(bodyId).innerHTML=linhas.length?linhas.map((item,i)=>{
+    const st=item.st; const total=st.t+st.s+st.v; const pct=taxaStats(st);
+    const numCor=i===0?'var(--gold)':i===1?'#8a9bb0':i===2?'#a0704a':'var(--muted)';
+    return `<tr>
+      <td style="color:${numCor};font-weight:700">${i+1}</td>
+      <td style="font-weight:700">${item.ativo}</td>
+      <td><span class="badge Take">${st.t}</span></td>
+      <td><span class="badge Virada">${st.v}</span></td>
+      <td><span class="badge Stop">${st.s}</span></td>
+      <td>${total}</td>
+      <td><div class="pct-bar"><div class="pct-mini"><div class="pct-mini-fill" style="width:${pct}%"></div></div>
+      <span style="color:${pct>=75?'var(--gold)':'var(--muted)'};font-weight:600">${pct}%</span></div></td>
+    </tr>`;
+  }).join(''):'<tr><td colspan="7" style="color:var(--muted);text-align:center;padding:16px;">Sem ativos.</td></tr>';
 }
 
-function renderDist(dados, wrId){
-  const t=dados.filter(d=>d.resultado==='Take').length;
-  const s=dados.filter(d=>d.resultado==='Stop').length;
-  const v=dados.filter(d=>d.resultado==='Virada').length;
-  const tot=dados.length;
-  document.getElementById(wrId).innerHTML = [
-    {label:'Take',val:t,cor:'var(--take)'},{label:'Virada',val:v,cor:'var(--virada)'},{label:'Stop',val:s,cor:'var(--stop)'}
-  ].map(({label,val,cor})=>`
-    <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
-      <div style="font-size:11px;min-width:50px;color:${cor}">${label}</div>
-      <div style="flex:1;height:9px;background:rgba(255,255,255,0.06);border-radius:5px;overflow:hidden;">
-        <div style="width:${tot>0?Math.round(val/tot*100):0}%;height:100%;background:${cor};border-radius:5px;"></div>
-      </div>
-      <div style="font-size:11px;font-weight:600;min-width:26px;text-align:right;color:${cor}">${val}</div>
-    </div>`).join('');
-}
-
-function renderHeatmap(sh, wrId, dadosBase=[]){
+function renderHeatmap(sh, wrId){
   const horas = HORAS_DASH;
   document.getElementById(wrId).innerHTML = horas.map(h=>{
     const st=sh[h]||{t:0,s:0,v:0};
     const tot=st.t+st.s+st.v;
-    const ativoLabel=ativoAtual==='TODOS' ? (melhorAtivoDaHora(dadosBase,h)||'todos') : ativoAtual;
-    if(tot===0) return `<div class="heat-cell"><div class="heat-hora">${labelHora(h)}</div><div class="heat-num" style="color:var(--muted);">—</div><div class="heat-tipo">${ativoLabel}</div></div>`;
+    if(tot===0) return `<div class="heat-cell"><div class="heat-hora">${labelHora(h)}</div><div class="heat-num" style="color:var(--muted);">—</div><div class="heat-tipo">sem dados</div></div>`;
     const pct=Math.round((st.t+st.v)/tot*100);
     const intensity=(pct/100)*0.8;
     const cls=pct>=75?'ht':'hs';
-    const label=pct>=90?'Ótimo':pct>=80?'Bom':pct>=70?'Ok':'Ruim';
     return `<div class="heat-cell ${cls}" style="--intensity:${intensity}">
       <div class="heat-hora">${labelHora(h)}</div>
       <div class="heat-num">${pct}%</div>
-      <div class="heat-tipo">${ativoLabel} · ${label}</div>
+      <div class="heat-tipo">${tot} ops</div>
     </div>`;
   }).join('');
 }
 
-function renderTop10AtivoHoraTabela(dados, bodyId){
+function renderTop10AtivoHoraTabela(dados, bodyId, modo='melhor'){
   const comboStats=statsAtivoHora(dados||[]);
-  const top10=ordenarStats(Object.keys(comboStats).map(k=>({st:comboStats[k]})),1).slice(0,10);
-  document.getElementById(bodyId).innerHTML=top10.length?top10.map((h,i)=>{
+  const linhas=Object.keys(comboStats).map(k=>({st:comboStats[k]})).filter(item=>{
+    const st=item.st; return st.t+st.s+st.v>0;
+  }).sort((a,b)=>{
+    const ta=a.st.t+a.st.s+a.st.v;
+    const tb=b.st.t+b.st.s+b.st.v;
+    return modo==='pior'
+      ? taxaStats(a.st)-taxaStats(b.st) || tb-ta
+      : taxaStats(b.st)-taxaStats(a.st) || tb-ta;
+  }).slice(0,10);
+
+  document.getElementById(bodyId).innerHTML=linhas.length?linhas.map((h,i)=>{
     const st=h.st; const tot=st.t+st.s+st.v;
     const pct=taxaStats(st);
     const numCor=i===0?'var(--gold)':i===1?'#8a9bb0':i===2?'#a0704a':'var(--muted)';
+    const pctCor=modo==='pior'?'var(--stop)':(i<3?'var(--gold)':'var(--muted)');
     return `<tr><td style="color:${numCor};font-weight:700">${i+1}</td><td style="font-weight:600">${st.ativo}</td><td style="font-weight:600">${labelHora(st.horario)}</td>
       <td><span class="badge Take">${st.t}</span></td><td><span class="badge Virada">${st.v}</span></td>
       <td><span class="badge Stop">${st.s}</span></td><td>${tot}</td>
       <td><div class="pct-bar"><div class="pct-mini"><div class="pct-mini-fill" style="width:${pct}%"></div></div>
-      <span style="color:${i<3?'var(--gold)':'var(--muted)'};font-weight:600;white-space:nowrap;">${pct}%</span></div></td></tr>`;
+      <span style="color:${pctCor};font-weight:600;white-space:nowrap;">${pct}%</span></div></td></tr>`;
   }).join(''):'<tr><td colspan="8" style="color:var(--muted);text-align:center;padding:16px;">Sem dados.</td></tr>';
 }
 
@@ -867,6 +859,7 @@ async function carregarGeral(){
   const dadosTodos = await supaFetch('/rest/v1/backtest?tempo_grafico=eq.'+tgAtual+'&select=*&order=data.asc');
   atualizarFiltroAtivos(dadosTodos);
   const dados = filtrarAtivo(dadosTodos);
+  const escopoTxt = ativoAtual==='TODOS'?'Todos ativos':ativoAtual;
 
   document.getElementById('loadingWrap').style.display='none';
   document.getElementById('viewGeral').style.display='block';
@@ -874,12 +867,16 @@ async function carregarGeral(){
   if(!dados||dados.length===0){
     document.getElementById('gTotal').textContent='0';
     ['gTakes','gStops','gViradas','gTaxa','gTend'].forEach(id=>document.getElementById(id).textContent='—');
-    document.getElementById('gMeses').textContent='Nenhum dado para '+tgAtual+' · '+(ativoAtual==='TODOS'?'Todos ativos':ativoAtual);
+    document.getElementById('gMeses').textContent='Nenhum dado para '+tgAtual+' · '+escopoTxt;
     document.getElementById('gTop10RecentesBody').innerHTML='<tr><td colspan="8" style="color:var(--muted);text-align:center;padding:16px;">Sem dados.</td></tr>';
-    ['gMelhorAtivo','gMelhorCombo','gMelhorHoraAtivo'].forEach(id=>document.getElementById(id).textContent='—');
-    ['gMelhorAtivoSub','gMelhorComboSub','gMelhorHoraAtivoSub'].forEach(id=>document.getElementById(id).textContent='Sem dados suficientes');
-    if(document.getElementById('gTopAtivosWrap')) renderTopAtivos(dadosTodos||[],'gTopAtivosWrap');
-    if(chartPizzaGeral){chartPizzaGeral.destroy();chartPizzaGeral=null;}
+    document.getElementById('gPior10Body').innerHTML='<tr><td colspan="8" style="color:var(--muted);text-align:center;padding:16px;">Sem dados.</td></tr>';
+    document.getElementById('gRankingAtivosBody').innerHTML='<tr><td colspan="7" style="color:var(--muted);text-align:center;padding:16px;">Sem ativos.</td></tr>';
+    ['gMelhorAtivo','gMelhorCombo','gPiorCombo'].forEach(id=>document.getElementById(id).textContent='—');
+    ['gMelhorAtivoSub','gMelhorComboSub','gPiorComboSub'].forEach(id=>document.getElementById(id).textContent='Sem dados suficientes');
+    document.getElementById('gDiasWrap').innerHTML='';
+    document.getElementById('gHeatmapWrap').innerHTML='';
+    document.getElementById('mesesBody').innerHTML='';
+    document.getElementById('gMesesSection').style.display='none';
     return;
   }
 
@@ -920,10 +917,9 @@ async function carregarGeral(){
 
   // Cards
   document.getElementById('gTotal').textContent=total;
-  document.getElementById('gMeses').textContent=mesesLista.length+' meses · '+tgAtual+' · '+(ativoAtual==='TODOS'?'Todos ativos':ativoAtual);
-  document.getElementById('gTop10Title').textContent=ativoAtual==='TODOS'?'Top 10 Ativo/Horário — Últimos 2 Meses':'Top 10 Horários de '+ativoAtual+' — Últimos 2 Meses';
-  document.getElementById('gMesesTitle').textContent='Todos os Meses — '+(ativoAtual==='TODOS'?'Todos ativos':ativoAtual);
-  document.getElementById('gHeatmapTitle').textContent='Heatmap de Horários — '+(ativoAtual==='TODOS'?'Ativos combinados':ativoAtual);
+  document.getElementById('gMeses').textContent=mesesLista.length+' meses · '+tgAtual+' · '+escopoTxt;
+  document.getElementById('gTop10Title').textContent=ativoAtual==='TODOS'?'Top 10 Melhores Ativo/Horário':'Top 10 Melhores Horários — '+ativoAtual;
+  document.getElementById('gHeatmapTitle').textContent=ativoAtual==='TODOS'?'Horários Gerais':'Horários — '+ativoAtual;
   document.getElementById('gTakes').textContent=takes;
   document.getElementById('gTakesPct').textContent=Math.round(takes/total*100)+'% do total';
   document.getElementById('gStops').textContent=stops;
@@ -935,68 +931,14 @@ async function carregarGeral(){
   tendEl.textContent=tendTxt;
   tendEl.className='card-val '+tendCls;
 
-  // Gráfico evolução
-  document.getElementById('gEvolucaoTitle').textContent=ativoAtual==='TODOS'?'Evolução Mensal — Top 3 Ativos':'Evolução Mensal — '+ativoAtual;
-  const labels=mesesLista.map(m=>m.replace('/','/').split('/')[0].slice(0,3)+'/'+m.split('/')[1].slice(2));
-  const taxas=mesesLista.map(m=>{
-    const ms=porMes[m]; const tot=ms.takes+ms.stops+ms.viradas;
-    return tot>0?Math.round((ms.takes+ms.viradas)/tot*100):0;
-  });
-  let datasetsEvolucao=[{label:'Assertividade %',data:taxas,backgroundColor:taxas.map(t=>t>=80?'rgba(201,168,76,0.7)':t>=70?'rgba(201,168,76,0.4)':'rgba(224,85,85,0.4)'),borderColor:taxas.map(t=>t>=80?'#c9a84c':t>=70?'rgba(201,168,76,0.6)':'#e05555'),borderWidth:1,borderRadius:4}];
-  if(ativoAtual==='TODOS'){
-    const topAtivos=ordenarStats(Object.entries(statsPorAtivo(dadosTodos||[])).map(([ativo,st])=>({ativo,st})),1).slice(0,3);
-    const porMesAtivo=agruparMesAtivo(dadosTodos||[]);
-    const cores=['#c9a84c','#8a9bb0','#b86a62'];
-    datasetsEvolucao=topAtivos.map((item,i)=>({
-      label:item.ativo,
-      data:mesesLista.map(m=>{
-        const st=porMesAtivo[m]&&porMesAtivo[m][item.ativo];
-        return st?taxaStats(st):0;
-      }),
-      backgroundColor:cores[i]+'88',
-      borderColor:cores[i],
-      borderWidth:1,
-      borderRadius:4
-    }));
-  }
-  if(chartGeral){chartGeral.destroy();}
-  const ctx=document.getElementById('chartGeral').getContext('2d');
-  chartGeral=new Chart(ctx,{
-    type:'bar',
-    data:{labels,datasets:datasetsEvolucao},
-    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:ativoAtual==='TODOS',labels:{color:'#e0e0e0',font:{size:10},boxWidth:10,boxHeight:10}}},scales:{
-      x:{ticks:{color:'#7a9ab8',font:{size:9}},grid:{color:'rgba(201,168,76,0.05)'}},
-      y:{ticks:{color:'#7a9ab8',font:{size:9},callback:v=>v+'%'},grid:{color:'rgba(201,168,76,0.05)'},min:0,max:100}
-    }}
-  });
-
-  if(chartPizzaGeral){chartPizzaGeral.destroy();}
-  const ctxPizza=document.getElementById('chartPizzaGeral').getContext('2d');
-  let pizzaLabels=['Take','Virada','Stop'];
-  let pizzaData=[takes,viradas,stops];
-  let pizzaColors=['#c9a84c','#e0c06e','#b86a62'];
-  document.getElementById('gPizzaTitle').textContent=ativoAtual==='TODOS'?'Distribuição por Ativo':'Distribuição — Take, Stop e Virada';
-  if(ativoAtual==='TODOS'){
-    const ativosDist=Object.entries(statsPorAtivo(dadosTodos||[])).map(([ativo,st])=>({ativo,st,total:st.t+st.s+st.v})).sort((a,b)=>b.total-a.total);
-    pizzaLabels=ativosDist.map(x=>x.ativo);
-    pizzaData=ativosDist.map(x=>x.total);
-    pizzaColors=['#c9a84c','#8a9bb0','#b86a62','#6f5aa8','#4caf82','#4a9fe0','#e0c06e','#7a9ab8'];
-  }
-  chartPizzaGeral=new Chart(ctxPizza,{
-    type:'doughnut',
-    data:{labels:pizzaLabels,datasets:[{data:pizzaData,backgroundColor:pizzaColors,borderColor:'#0f2340',borderWidth:2,hoverOffset:6}]},
-    options:{responsive:true,maintainAspectRatio:false,cutout:'58%',plugins:{legend:{position:'bottom',labels:{color:'#e0e0e0',font:{size:11},boxWidth:10,boxHeight:10}},tooltip:{callbacks:{label:ctx=>ctx.label+': '+ctx.raw+' ops'}}}}
-  });
-
   // Stats horário geral
   const sh=statsHora(dados);
-  renderTopAtivos(dadosTodos,'gTopAtivosWrap');
-  renderTop3(sh,'gTop3Wrap','melhor');
-  renderTop3(sh,'gPior3Wrap','pior');
-  renderDist(dados,'gDistWrap');
-  renderHeatmap(sh,'gHeatmapWrap',dados);
+  renderHeatmap(sh,'gHeatmapWrap');
 
-  const ativosStats=statsPorAtivo(dadosTodos||[]);
+  const baseRanking = ativoAtual==='TODOS' ? dadosTodos : dados;
+  renderRankingAtivos(baseRanking,'gRankingAtivosBody');
+
+  const ativosStats=statsPorAtivo(baseRanking||[]);
   const melhorAtivo=ordenarStats(Object.keys(ativosStats).map(a=>({ativo:a,st:ativosStats[a]})))[0];
   if(melhorAtivo){
     const tot=melhorAtivo.st.t+melhorAtivo.st.s+melhorAtivo.st.v;
@@ -1007,8 +949,9 @@ async function carregarGeral(){
     document.getElementById('gMelhorAtivoSub').textContent='mín. 10 operações';
   }
 
-  const comboStats=statsAtivoHora(dadosTodos||[]);
-  const melhorCombo=ordenarStats(Object.keys(comboStats).map(k=>({st:comboStats[k]})))[0];
+  const comboStats=statsAtivoHora(baseRanking||[]);
+  const combos=Object.keys(comboStats).map(k=>({st:comboStats[k]})).filter(item=>item.st.t+item.st.s+item.st.v>0);
+  const melhorCombo=ordenarStats(combos)[0];
   if(melhorCombo){
     const st=melhorCombo.st; const tot=st.t+st.s+st.v;
     document.getElementById('gMelhorCombo').textContent=st.ativo+' · '+labelHora(st.horario);
@@ -1018,14 +961,15 @@ async function carregarGeral(){
     document.getElementById('gMelhorComboSub').textContent='mín. 10 operações';
   }
 
-  const melhorHora=horasOrdenadas(sh,'melhor')[0];
-  if(melhorHora){
-    const st=sh[melhorHora]; const tot=st.t+st.s+st.v;
-    document.getElementById('gMelhorHoraAtivo').textContent=labelHora(melhorHora);
-    document.getElementById('gMelhorHoraAtivoSub').textContent=taxaStats(st)+'% · '+tot+' ops · '+(ativoAtual==='TODOS'?'todos ativos':ativoAtual);
+  const piorCombo=combos.filter(item=>item.st.t+item.st.s+item.st.v>=10)
+    .sort((a,b)=>taxaStats(a.st)-taxaStats(b.st) || (b.st.t+b.st.s+b.st.v)-(a.st.t+a.st.s+a.st.v))[0];
+  if(piorCombo){
+    const st=piorCombo.st; const tot=st.t+st.s+st.v;
+    document.getElementById('gPiorCombo').textContent=st.ativo+' · '+labelHora(st.horario);
+    document.getElementById('gPiorComboSub').textContent=taxaStats(st)+'% · '+tot+' ops';
   }else{
-    document.getElementById('gMelhorHoraAtivo').textContent='—';
-    document.getElementById('gMelhorHoraAtivoSub').textContent='Sem dados suficientes';
+    document.getElementById('gPiorCombo').textContent='—';
+    document.getElementById('gPiorComboSub').textContent='mín. 10 operações';
   }
 
   // Dias da semana
@@ -1052,9 +996,13 @@ async function carregarGeral(){
 
   const ultimosDoisMeses=mesesLista.slice(-2);
   const dadosRecentes=dados.filter(d=>ultimosDoisMeses.includes(d.mes));
-  renderTop10AtivoHoraTabela(dadosRecentes,'gTop10RecentesBody');
+  renderTop10AtivoHoraTabela(dadosRecentes,'gTop10RecentesBody','melhor');
+  renderTop10AtivoHoraTabela(dadosRecentes,'gPior10Body','pior');
 
   // Tabela de meses
+  const mesesSection=document.getElementById('gMesesSection');
+  mesesSection.style.display=ativoAtual==='TODOS'?'none':'grid';
+  document.getElementById('gMesesTitle').textContent='Todos os Meses — '+ativoAtual;
   const melhorPct=Math.max(...mesesLista.map(m=>{const ms=porMes[m];const t=ms.takes+ms.stops+ms.viradas;return t>0?Math.round((ms.takes+ms.viradas)/t*100):0;}));
   document.getElementById('mesesBody').innerHTML=mesesLista.reverse().map(m=>{
     const ms=porMes[m]; const tot=ms.takes+ms.stops+ms.viradas;
