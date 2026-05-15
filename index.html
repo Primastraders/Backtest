@@ -132,10 +132,10 @@ main{position:relative;z-index:10;padding:24px 28px;max-width:1400px;margin:0 au
 .heatmap-vertical .heat-tipo{font-size:8px;text-align:right;}
 
 /* DIAS SEMANA */
-.dias-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;}
-.dia-card{background:var(--navy-lt);border-radius:8px;padding:10px 8px;text-align:center;}
+.dias-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:7px;}
+.dia-card{background:var(--navy-lt);border-radius:8px;padding:9px 6px;text-align:center;}
 .dia-nome{font-size:10px;color:var(--gold);font-weight:600;margin-bottom:4px;}
-.dia-pct{font-size:18px;font-weight:700;}
+.dia-pct{font-size:17px;font-weight:700;}
 .dia-sub{font-size:9px;color:var(--muted);margin-top:2px;}
 
 /* CHART */
@@ -1013,22 +1013,23 @@ async function carregarGeral(){
   }
 
   // Dias da semana
-  const diasStats={1:{t:0,s:0,v:0},2:{t:0,s:0,v:0},3:{t:0,s:0,v:0},4:{t:0,s:0,v:0},5:{t:0,s:0,v:0}};
+  const diasOrdem=[1,2,3,4,5,6,0];
+  const diasNomes={1:'Seg',2:'Ter',3:'Qua',4:'Qui',5:'Sex',6:'Sáb',0:'Dom'};
+  const diasStats={};
+  diasOrdem.forEach(dow=>diasStats[dow]={t:0,s:0,v:0});
   dados.forEach(d=>{
     const dow=new Date(d.data+'T12:00:00').getDay();
-    if(dow>=1&&dow<=5){
-      if(d.resultado==='Take') diasStats[dow].t++;
-      if(d.resultado==='Stop') diasStats[dow].s++;
-      if(d.resultado==='Virada') diasStats[dow].v++;
-    }
+    if(!diasStats[dow]) return;
+    if(d.resultado==='Take') diasStats[dow].t++;
+    if(d.resultado==='Stop') diasStats[dow].s++;
+    if(d.resultado==='Virada') diasStats[dow].v++;
   });
-  const diasNomes=['Seg','Ter','Qua','Qui','Sex'];
-  document.getElementById('gDiasWrap').innerHTML=[1,2,3,4,5].map((dow,i)=>{
+  document.getElementById('gDiasWrap').innerHTML=diasOrdem.map(dow=>{
     const st=diasStats[dow]; const tot=st.t+st.s+st.v;
     const pct=tot>0?Math.round((st.t+st.v)/tot*100):0;
     const cor=pct>=80?'var(--take)':pct>=70?'var(--gold)':'var(--stop)';
     return `<div class="dia-card">
-      <div class="dia-nome">${diasNomes[i]}</div>
+      <div class="dia-nome">${diasNomes[dow]}</div>
       <div class="dia-pct" style="color:${cor}">${pct}%</div>
       <div class="dia-sub">${tot} ops</div>
     </div>`;
