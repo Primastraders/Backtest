@@ -139,15 +139,15 @@ main{position:relative;z-index:10;padding:24px 28px;max-width:1400px;margin:0 au
 .dia-pct{font-size:17px;font-weight:700;}
 .dia-sub{font-size:9px;color:var(--muted);margin-top:2px;}
 .dias-ativos-list{display:flex;flex-direction:column;gap:10px;}
-.weekday-asset-row{background:rgba(10,24,43,.42);border:1px solid rgba(201,168,76,.08);border-radius:8px;padding:10px 12px;}
-.weekday-asset-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:8px;}
-.weekday-asset-name{font-weight:800;color:#e6eaf0;font-size:13px;}
-.weekday-best-hour{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;white-space:nowrap;}
-.weekday-best-hour b{color:var(--gold);font-size:12px;}
-.weekday-chip-row{display:flex;flex-wrap:wrap;gap:6px;}
-.weekday-chip{background:var(--navy-lt);border-radius:999px;padding:6px 9px;font-size:11px;color:#d9e0eb;}
-.weekday-chip strong{color:var(--gold);font-weight:800;}
-.weekday-chip.muted{color:var(--muted);}
+.weekday-asset-row{background:rgba(10,24,43,.42);border:1px solid rgba(201,168,76,.08);border-radius:8px;padding:12px 14px;display:grid;grid-template-columns:130px 1fr;align-items:center;gap:16px;}
+.weekday-asset-name{font-weight:800;color:#e6eaf0;font-size:18px;}
+.weekday-combos{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:0;}
+.weekday-combo{display:grid;grid-template-columns:minmax(62px,1fr) 42px 42px;gap:8px;align-items:center;padding:4px 12px;border-left:1px solid rgba(201,168,76,.18);}
+.weekday-combo:first-child{border-left:none;}
+.weekday-day{font-size:12px;color:#dce5f1;font-weight:600;}
+.weekday-hour{font-size:12px;color:var(--muted);font-weight:700;text-align:center;}
+.weekday-pct{font-size:13px;color:var(--gold);font-weight:800;text-align:right;}
+.weekday-empty{font-size:12px;color:var(--muted);}
 
 /* CHART */
 .chart-wrap{position:relative;height:180px;}
@@ -820,47 +820,49 @@ function renderRankingAtivos(dados, bodyId){
 
 function renderDiasAssertivosPorAtivo(dados, wrapId){
   const diasOrdem=[1,2,3,4,5,6,0];
-  const diasNomes={1:'Seg',2:'Ter',3:'Qua',4:'Qui',5:'Sex',6:'Sáb',0:'Dom'};
+  const diasNomes={1:'Segunda',2:'Terça',3:'Quarta',4:'Quinta',5:'Sexta',6:'Sábado',0:'Domingo'};
   const porAtivo={};
 
   (dados||[]).forEach(d=>{
     const ativo=getAtivo(d);
     const dow=new Date(d.data+'T12:00:00').getDay();
     if(!porAtivo[ativo]){
-      porAtivo[ativo]={dias:{},horas:{},geral:{t:0,s:0,v:0}};
-      diasOrdem.forEach(x=>porAtivo[ativo].dias[x]={t:0,s:0,v:0});
+      porAtivo[ativo]={dias:{},geral:{t:0,s:0,v:0}};
+      diasOrdem.forEach(x=>porAtivo[ativo].dias[x]={horas:{}});
     }
-    if(!porAtivo[ativo].dias[dow]) return;
     const dia=porAtivo[ativo].dias[dow];
+    if(!dia) return;
     const hora=d.horario || '';
-    if(!porAtivo[ativo].horas[hora]) porAtivo[ativo].horas[hora]={t:0,s:0,v:0,hora};
+    if(!dia.horas[hora]) dia.horas[hora]={t:0,s:0,v:0,hora};
 
-    if(d.resultado==='Take'){ dia.t++; porAtivo[ativo].horas[hora].t++; porAtivo[ativo].geral.t++; }
-    if(d.resultado==='Stop'){ dia.s++; porAtivo[ativo].horas[hora].s++; porAtivo[ativo].geral.s++; }
-    if(d.resultado==='Virada'){ dia.v++; porAtivo[ativo].horas[hora].v++; porAtivo[ativo].geral.v++; }
+    if(d.resultado==='Take'){ dia.horas[hora].t++; porAtivo[ativo].geral.t++; }
+    if(d.resultado==='Stop'){ dia.horas[hora].s++; porAtivo[ativo].geral.s++; }
+    if(d.resultado==='Virada'){ dia.horas[hora].v++; porAtivo[ativo].geral.v++; }
   });
 
   const linhas=Object.keys(porAtivo).map(ativo=>{
     const item=porAtivo[ativo];
-    const dias=diasOrdem.map(dow=>({dow,st:item.dias[dow]}))
-      .filter(x=>x.st.t+x.st.s+x.st.v>0)
-      .sort((a,b)=>taxaStats(b.st)-taxaStats(a.st) || (b.st.t+b.st.s+b.st.v)-(a.st.t+a.st.s+a.st.v));
-    const melhorHora=Object.keys(item.horas).map(h=>item.horas[h])
-      .filter(st=>st.t+st.s+st.v>0)
-      .sort((a,b)=>taxaStats(b)-taxaStats(a) || (b.t+b.s+b.v)-(a.t+a.s+a.v))[0];
+    const combos=diasOrdem.map(dow=>{
+      const horas=item.dias[dow].horas;
+      const melhorHora=Object.keys(horas).map(h=>horas[h])
+        .filter(st=>st.t+st.s+st.v>0)
+        .sort((a,b)=>taxaStats(b)-taxaStats(a) || (b.t+b.s+b.v)-(a.t+a.s+a.v))[0];
+      return melhorHora?{dow,st:melhorHora,pct:taxaStats(melhorHora)}:null;
+    }).filter(Boolean).sort((a,b)=>b.pct-a.pct || (b.st.t+b.st.s+b.st.v)-(a.st.t+a.st.s+a.st.v));
     const total=item.geral.t+item.geral.s+item.geral.v;
-    return {ativo,dias,melhorHora,score:taxaStats(item.geral),total};
+    const score=combos[0]?combos[0].pct:taxaStats(item.geral);
+    return {ativo,combos,total,score};
   }).sort((a,b)=>b.score-a.score || b.total-a.total || a.ativo.localeCompare(b.ativo));
 
   document.getElementById(wrapId).innerHTML=linhas.length?linhas.map(item=>{
-    const chips=item.dias.slice(0,4).map(dia=>`<span class="weekday-chip">${diasNomes[dia.dow]} <strong>${taxaStats(dia.st)}%</strong></span>`).join('');
-    const horaTxt=item.melhorHora?`${labelHora(item.melhorHora.hora)} ${taxaStats(item.melhorHora)}%`:'—';
+    const combos=item.combos.slice(0,4).map(combo=>`<div class="weekday-combo">
+      <span class="weekday-day">${diasNomes[combo.dow]}</span>
+      <span class="weekday-hour">${labelHora(combo.st.hora)}</span>
+      <span class="weekday-pct">${combo.pct}%</span>
+    </div>`).join('');
     return `<div class="weekday-asset-row">
-      <div class="weekday-asset-head">
-        <span class="weekday-asset-name">${item.ativo}</span>
-        <span class="weekday-best-hour">Melhor horário: <b>${horaTxt}</b></span>
-      </div>
-      <div class="weekday-chip-row">${chips || '<span class="weekday-chip muted">Sem dados por dia</span>'}</div>
+      <div class="weekday-asset-name">${item.ativo}</div>
+      <div class="weekday-combos">${combos || '<span class="weekday-empty">Sem dados por dia e horário</span>'}</div>
     </div>`;
   }).join(''):'<div class="empty-state"><p>Sem dados por ativo.</p></div>';
 }
