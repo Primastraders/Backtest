@@ -84,6 +84,7 @@ main{position:relative;z-index:10;padding:24px 28px;max-width:1400px;margin:0 au
 .section-title{font-size:10px;color:var(--gold);letter-spacing:2px;text-transform:uppercase;margin-bottom:14px;display:flex;align-items:center;gap:10px;}
 .section-title::after{content:'';flex:1;height:1px;background:var(--border);}
 .row-2{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:18px;}
+.row-1{display:grid;grid-template-columns:1fr;gap:18px;margin-bottom:18px;}
 .row-3{display:grid;grid-template-columns:2fr 1fr 1fr;gap:18px;margin-bottom:18px;}
 .month-stack{display:grid;grid-template-columns:1fr;gap:18px;margin-bottom:18px;}
 .month-below-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;align-items:stretch;}
@@ -326,25 +327,18 @@ footer{position:relative;z-index:10;text-align:center;padding:16px;font-size:10p
       </table>
     </div>
     <div class="box">
-      <div class="section-title">Dias Mais Assertivos por Ativo</div>
-      <div class="dias-ativos-list" id="gDiasAtivosWrap"></div>
-    </div>
-  </div>
-
-  <div class="row-2">
-    <div class="box">
-      <div class="section-title" id="gTop10Title">Top 10 Melhores Ativo/Horário</div>
-      <table class="top-table">
-        <thead><tr><th>#</th><th>Ativo</th><th>Hora</th><th>Takes</th><th>Viradas</th><th>Stops</th><th>Total</th><th>Assertividade</th></tr></thead>
-        <tbody id="gTop10RecentesBody"></tbody>
-      </table>
-    </div>
-    <div class="box">
       <div class="section-title">Top 10 Piores Ativo/Horário</div>
       <table class="top-table">
         <thead><tr><th>#</th><th>Ativo</th><th>Hora</th><th>Takes</th><th>Viradas</th><th>Stops</th><th>Total</th><th>Assertividade</th></tr></thead>
         <tbody id="gPior10Body"></tbody>
       </table>
+    </div>
+  </div>
+
+  <div class="row-1">
+    <div class="box">
+      <div class="section-title">Dias Mais Assertivos por Ativo</div>
+      <div class="dias-ativos-list" id="gDiasAtivosWrap"></div>
     </div>
   </div>
 
@@ -833,7 +827,7 @@ function renderDiasAssertivosPorAtivo(dados, wrapId){
     const ativo=getAtivo(d);
     const dow=new Date(d.data+'T12:00:00').getDay();
     if(!porAtivo[ativo]){
-      porAtivo[ativo]={dias:{},horas:{}};
+      porAtivo[ativo]={dias:{},horas:{},geral:{t:0,s:0,v:0}};
       diasOrdem.forEach(x=>porAtivo[ativo].dias[x]={t:0,s:0,v:0});
     }
     if(!porAtivo[ativo].dias[dow]) return;
@@ -841,9 +835,9 @@ function renderDiasAssertivosPorAtivo(dados, wrapId){
     const hora=d.horario || '';
     if(!porAtivo[ativo].horas[hora]) porAtivo[ativo].horas[hora]={t:0,s:0,v:0,hora};
 
-    if(d.resultado==='Take'){ dia.t++; porAtivo[ativo].horas[hora].t++; }
-    if(d.resultado==='Stop'){ dia.s++; porAtivo[ativo].horas[hora].s++; }
-    if(d.resultado==='Virada'){ dia.v++; porAtivo[ativo].horas[hora].v++; }
+    if(d.resultado==='Take'){ dia.t++; porAtivo[ativo].horas[hora].t++; porAtivo[ativo].geral.t++; }
+    if(d.resultado==='Stop'){ dia.s++; porAtivo[ativo].horas[hora].s++; porAtivo[ativo].geral.s++; }
+    if(d.resultado==='Virada'){ dia.v++; porAtivo[ativo].horas[hora].v++; porAtivo[ativo].geral.v++; }
   });
 
   const linhas=Object.keys(porAtivo).map(ativo=>{
@@ -854,9 +848,9 @@ function renderDiasAssertivosPorAtivo(dados, wrapId){
     const melhorHora=Object.keys(item.horas).map(h=>item.horas[h])
       .filter(st=>st.t+st.s+st.v>0)
       .sort((a,b)=>taxaStats(b)-taxaStats(a) || (b.t+b.s+b.v)-(a.t+a.s+a.v))[0];
-    const melhorDia=dias[0];
-    return {ativo,dias,melhorHora,score:melhorDia?taxaStats(melhorDia.st):0};
-  }).sort((a,b)=>b.score-a.score || a.ativo.localeCompare(b.ativo));
+    const total=item.geral.t+item.geral.s+item.geral.v;
+    return {ativo,dias,melhorHora,score:taxaStats(item.geral),total};
+  }).sort((a,b)=>b.score-a.score || b.total-a.total || a.ativo.localeCompare(b.ativo));
 
   document.getElementById(wrapId).innerHTML=linhas.length?linhas.map(item=>{
     const chips=item.dias.slice(0,4).map(dia=>`<span class="weekday-chip">${diasNomes[dia.dow]} <strong>${taxaStats(dia.st)}%</strong></span>`).join('');
@@ -965,7 +959,6 @@ async function carregarGeral(){
     document.getElementById('gTotal').textContent='0';
     ['gTakes','gStops','gViradas','gTaxa','gTend'].forEach(id=>document.getElementById(id).textContent='—');
     document.getElementById('gMeses').textContent='Nenhum dado para '+tgAtual+' · '+escopoTxt;
-    document.getElementById('gTop10RecentesBody').innerHTML='<tr><td colspan="8" style="color:var(--muted);text-align:center;padding:16px;">Sem dados.</td></tr>';
     document.getElementById('gPior10Body').innerHTML='<tr><td colspan="8" style="color:var(--muted);text-align:center;padding:16px;">Sem dados.</td></tr>';
     document.getElementById('gRankingAtivosBody').innerHTML='<tr><td colspan="7" style="color:var(--muted);text-align:center;padding:16px;">Sem ativos.</td></tr>';
     ['gMelhorAtivo','gMelhorCombo','gPiorCombo'].forEach(id=>document.getElementById(id).textContent='—');
@@ -1014,7 +1007,6 @@ async function carregarGeral(){
   // Cards
   document.getElementById('gTotal').textContent=total;
   document.getElementById('gMeses').textContent=mesesLista.length+' meses · '+tgAtual+' · '+escopoTxt;
-  document.getElementById('gTop10Title').textContent=ativoAtual==='TODOS'?'Top 10 Melhores Ativo/Horário — Histórico':'Top 10 Melhores Horários — '+ativoAtual+' — Histórico';
   document.getElementById('gTakes').textContent=takes;
   document.getElementById('gTakesPct').textContent=Math.round(takes/total*100)+'% do total';
   document.getElementById('gStops').textContent=stops;
@@ -1065,7 +1057,6 @@ async function carregarGeral(){
 
   renderDiasAssertivosPorAtivo(baseRanking,'gDiasAtivosWrap');
 
-  renderTop10AtivoHoraTabela(dados,'gTop10RecentesBody','melhor');
   renderTop10AtivoHoraTabela(dados,'gPior10Body','pior');
 
   // Tabela de meses
