@@ -137,6 +137,16 @@ main{position:relative;z-index:10;padding:24px 28px;max-width:1400px;margin:0 au
 .dia-nome{font-size:10px;color:var(--gold);font-weight:600;margin-bottom:4px;}
 .dia-pct{font-size:17px;font-weight:700;}
 .dia-sub{font-size:9px;color:var(--muted);margin-top:2px;}
+.dias-ativos-list{display:flex;flex-direction:column;gap:10px;}
+.weekday-asset-row{background:rgba(10,24,43,.42);border:1px solid rgba(201,168,76,.08);border-radius:8px;padding:10px 12px;}
+.weekday-asset-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:8px;}
+.weekday-asset-name{font-weight:800;color:#e6eaf0;font-size:13px;}
+.weekday-best-hour{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;white-space:nowrap;}
+.weekday-best-hour b{color:var(--gold);font-size:12px;}
+.weekday-chip-row{display:flex;flex-wrap:wrap;gap:6px;}
+.weekday-chip{background:var(--navy-lt);border-radius:999px;padding:6px 9px;font-size:11px;color:#d9e0eb;}
+.weekday-chip strong{color:var(--gold);font-weight:800;}
+.weekday-chip.muted{color:var(--muted);}
 
 /* CHART */
 .chart-wrap{position:relative;height:180px;}
@@ -316,9 +326,8 @@ footer{position:relative;z-index:10;text-align:center;padding:16px;font-size:10p
       </table>
     </div>
     <div class="box">
-      <div class="section-title">Dias da Semana</div>
-      <div class="dias-grid" id="gDiasWrap"></div>
-      <div style="margin-top:16px;"><div class="section-title" id="gHeatmapTitle">Horários Gerais</div><div class="heatmap" id="gHeatmapWrap"></div></div>
+      <div class="section-title">Dias Mais Assertivos por Ativo</div>
+      <div class="dias-ativos-list" id="gDiasAtivosWrap"></div>
     </div>
   </div>
 
@@ -815,6 +824,53 @@ function renderRankingAtivos(dados, bodyId){
   }).join(''):'<tr><td colspan="7" style="color:var(--muted);text-align:center;padding:16px;">Sem ativos.</td></tr>';
 }
 
+function renderDiasAssertivosPorAtivo(dados, wrapId){
+  const diasOrdem=[1,2,3,4,5,6,0];
+  const diasNomes={1:'Seg',2:'Ter',3:'Qua',4:'Qui',5:'Sex',6:'Sáb',0:'Dom'};
+  const porAtivo={};
+
+  (dados||[]).forEach(d=>{
+    const ativo=getAtivo(d);
+    const dow=new Date(d.data+'T12:00:00').getDay();
+    if(!porAtivo[ativo]){
+      porAtivo[ativo]={dias:{},horas:{}};
+      diasOrdem.forEach(x=>porAtivo[ativo].dias[x]={t:0,s:0,v:0});
+    }
+    if(!porAtivo[ativo].dias[dow]) return;
+    const dia=porAtivo[ativo].dias[dow];
+    const hora=d.horario || '';
+    if(!porAtivo[ativo].horas[hora]) porAtivo[ativo].horas[hora]={t:0,s:0,v:0,hora};
+
+    if(d.resultado==='Take'){ dia.t++; porAtivo[ativo].horas[hora].t++; }
+    if(d.resultado==='Stop'){ dia.s++; porAtivo[ativo].horas[hora].s++; }
+    if(d.resultado==='Virada'){ dia.v++; porAtivo[ativo].horas[hora].v++; }
+  });
+
+  const linhas=Object.keys(porAtivo).map(ativo=>{
+    const item=porAtivo[ativo];
+    const dias=diasOrdem.map(dow=>({dow,st:item.dias[dow]}))
+      .filter(x=>x.st.t+x.st.s+x.st.v>0)
+      .sort((a,b)=>taxaStats(b.st)-taxaStats(a.st) || (b.st.t+b.st.s+b.st.v)-(a.st.t+a.st.s+a.st.v));
+    const melhorHora=Object.keys(item.horas).map(h=>item.horas[h])
+      .filter(st=>st.t+st.s+st.v>0)
+      .sort((a,b)=>taxaStats(b)-taxaStats(a) || (b.t+b.s+b.v)-(a.t+a.s+a.v))[0];
+    const melhorDia=dias[0];
+    return {ativo,dias,melhorHora,score:melhorDia?taxaStats(melhorDia.st):0};
+  }).sort((a,b)=>b.score-a.score || a.ativo.localeCompare(b.ativo));
+
+  document.getElementById(wrapId).innerHTML=linhas.length?linhas.map(item=>{
+    const chips=item.dias.slice(0,4).map(dia=>`<span class="weekday-chip">${diasNomes[dia.dow]} <strong>${taxaStats(dia.st)}%</strong></span>`).join('');
+    const horaTxt=item.melhorHora?`${labelHora(item.melhorHora.hora)} ${taxaStats(item.melhorHora)}%`:'—';
+    return `<div class="weekday-asset-row">
+      <div class="weekday-asset-head">
+        <span class="weekday-asset-name">${item.ativo}</span>
+        <span class="weekday-best-hour">Melhor horário: <b>${horaTxt}</b></span>
+      </div>
+      <div class="weekday-chip-row">${chips || '<span class="weekday-chip muted">Sem dados por dia</span>'}</div>
+    </div>`;
+  }).join(''):'<div class="empty-state"><p>Sem dados por ativo.</p></div>';
+}
+
 function renderDist(dados, wrId){
   const t=dados.filter(d=>d.resultado==='Take').length;
   const s=dados.filter(d=>d.resultado==='Stop').length;
@@ -914,8 +970,7 @@ async function carregarGeral(){
     document.getElementById('gRankingAtivosBody').innerHTML='<tr><td colspan="7" style="color:var(--muted);text-align:center;padding:16px;">Sem ativos.</td></tr>';
     ['gMelhorAtivo','gMelhorCombo','gPiorCombo'].forEach(id=>document.getElementById(id).textContent='—');
     ['gMelhorAtivoSub','gMelhorComboSub','gPiorComboSub'].forEach(id=>document.getElementById(id).textContent='Sem dados suficientes');
-    document.getElementById('gDiasWrap').innerHTML='';
-    document.getElementById('gHeatmapWrap').innerHTML='';
+    document.getElementById('gDiasAtivosWrap').innerHTML='';
     document.getElementById('mesesBody').innerHTML='';
     document.getElementById('gMesesSection').style.display='none';
     return;
@@ -960,7 +1015,6 @@ async function carregarGeral(){
   document.getElementById('gTotal').textContent=total;
   document.getElementById('gMeses').textContent=mesesLista.length+' meses · '+tgAtual+' · '+escopoTxt;
   document.getElementById('gTop10Title').textContent=ativoAtual==='TODOS'?'Top 10 Melhores Ativo/Horário — Histórico':'Top 10 Melhores Horários — '+ativoAtual+' — Histórico';
-  document.getElementById('gHeatmapTitle').textContent=ativoAtual==='TODOS'?'Horários Gerais':'Horários — '+ativoAtual;
   document.getElementById('gTakes').textContent=takes;
   document.getElementById('gTakesPct').textContent=Math.round(takes/total*100)+'% do total';
   document.getElementById('gStops').textContent=stops;
@@ -971,10 +1025,6 @@ async function carregarGeral(){
   const tendEl=document.getElementById('gTend');
   tendEl.textContent=tendTxt;
   tendEl.className='card-val '+tendCls;
-
-  // Stats horário geral
-  const sh=statsHora(dados);
-  renderHeatmap(sh,'gHeatmapWrap');
 
   const baseRanking = ativoAtual==='TODOS' ? dadosTodos : dados;
   renderRankingAtivos(baseRanking,'gRankingAtivosBody');
@@ -1013,28 +1063,7 @@ async function carregarGeral(){
     document.getElementById('gPiorComboSub').textContent='mín. 10 operações';
   }
 
-  // Dias da semana
-  const diasOrdem=[1,2,3,4,5,6,0];
-  const diasNomes={1:'Seg',2:'Ter',3:'Qua',4:'Qui',5:'Sex',6:'Sáb',0:'Dom'};
-  const diasStats={};
-  diasOrdem.forEach(dow=>diasStats[dow]={t:0,s:0,v:0});
-  dados.forEach(d=>{
-    const dow=new Date(d.data+'T12:00:00').getDay();
-    if(!diasStats[dow]) return;
-    if(d.resultado==='Take') diasStats[dow].t++;
-    if(d.resultado==='Stop') diasStats[dow].s++;
-    if(d.resultado==='Virada') diasStats[dow].v++;
-  });
-  document.getElementById('gDiasWrap').innerHTML=diasOrdem.map(dow=>{
-    const st=diasStats[dow]; const tot=st.t+st.s+st.v;
-    const pct=tot>0?Math.round((st.t+st.v)/tot*100):0;
-    const cor=pct>=80?'var(--take)':pct>=70?'var(--gold)':'var(--stop)';
-    return `<div class="dia-card">
-      <div class="dia-nome">${diasNomes[dow]}</div>
-      <div class="dia-pct" style="color:${cor}">${pct}%</div>
-      <div class="dia-sub">${tot} ops</div>
-    </div>`;
-  }).join('');
+  renderDiasAssertivosPorAtivo(baseRanking,'gDiasAtivosWrap');
 
   renderTop10AtivoHoraTabela(dados,'gTop10RecentesBody','melhor');
   renderTop10AtivoHoraTabela(dados,'gPior10Body','pior');
