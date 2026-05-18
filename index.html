@@ -4,7 +4,7 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>Primas Traders — Backtest</title>
-<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%23081529'/%3E%3Cpath d='M14 38c12-2 19-10 25-24 2 12-2 22-12 30 10-3 17-9 22-18 3 12-7 24-25 27' fill='none' stroke='%23c9a84c' stroke-width='5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"/>
+<link rel="icon" type="image/png" href="primas-favicon.png"/>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=Barlow:wght@300;400;500;600&family=Barlow+Condensed:wght@400;500;600;700&display=swap" rel="stylesheet"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <style>
@@ -140,9 +140,9 @@ main{position:relative;z-index:10;padding:24px 28px;max-width:1400px;margin:0 au
 .dia-pct{font-size:17px;font-weight:700;}
 .dia-sub{font-size:9px;color:var(--muted);margin-top:2px;}
 .dias-ativos-list{display:flex;flex-direction:column;gap:10px;}
-.weekday-asset-row{background:rgba(10,24,43,.42);border:1px solid rgba(201,168,76,.08);border-radius:8px;padding:12px 14px;display:grid;grid-template-columns:130px 1fr;align-items:center;gap:16px;}
+.weekday-asset-row{background:rgba(10,24,43,.42);border:1px solid rgba(201,168,76,.08);border-radius:8px;padding:12px 14px;display:grid;grid-template-columns:130px 1fr;align-items:start;gap:16px;}
 .weekday-asset-name{font-weight:800;color:#e6eaf0;font-size:18px;}
-.weekday-combos{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:0;}
+.weekday-combos{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px 0;}
 .weekday-combo{display:grid;grid-template-columns:minmax(62px,1fr) 42px 42px;gap:8px;align-items:center;padding:4px 12px;border-left:1px solid rgba(201,168,76,.18);}
 .weekday-combo:first-child{border-left:none;}
 .weekday-day{font-size:12px;color:#dce5f1;font-weight:600;}
@@ -331,10 +331,10 @@ footer{position:relative;z-index:10;text-align:center;padding:16px;font-size:10p
     </div>
   </div>
 
-  <div class="row-1" id="gRRSection" style="display:none;">
+  <div class="row-1">
     <div class="box">
-      <div class="section-title">Comparação RR</div>
-      <div id="gRRWrap"></div>
+      <div class="section-title">Dias Mais Assertivos por Ativo</div>
+      <div class="dias-ativos-list" id="gDiasAtivosWrap"></div>
     </div>
   </div>
 
@@ -362,10 +362,10 @@ footer{position:relative;z-index:10;text-align:center;padding:16px;font-size:10p
     </div>
   </div>
 
-  <div class="row-1">
+  <div class="row-1" id="gRRSection" style="display:none;">
     <div class="box">
-      <div class="section-title">Dias Mais Assertivos por Ativo</div>
-      <div class="dias-ativos-list" id="gDiasAtivosWrap"></div>
+      <div class="section-title">Comparação RR</div>
+      <div id="gRRWrap"></div>
     </div>
   </div>
 
