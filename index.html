@@ -143,8 +143,11 @@ main{position:relative;z-index:10;padding:24px 28px;max-width:1400px;margin:0 au
 .weekday-asset-row{background:rgba(10,24,43,.42);border:1px solid rgba(201,168,76,.08);border-radius:8px;padding:12px 14px;display:grid;grid-template-columns:130px 1fr;align-items:start;gap:16px;}
 .weekday-asset-name{font-weight:800;color:#e6eaf0;font-size:18px;}
 .weekday-combos{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px 0;}
+.weekday-asset-row.expanded .weekday-combos{grid-template-columns:repeat(4,minmax(0,1fr));}
 .weekday-combo{display:grid;grid-template-columns:minmax(62px,1fr) 42px 42px;gap:8px;align-items:center;padding:4px 12px;border-left:1px solid rgba(201,168,76,.18);}
+.weekday-combo.all-assets{grid-template-columns:minmax(74px,1fr) minmax(62px,1fr) 42px 42px;}
 .weekday-combo:first-child{border-left:none;}
+.weekday-asset{font-size:12px;color:#e6eaf0;font-weight:800;}
 .weekday-day{font-size:12px;color:#dce5f1;font-weight:600;}
 .weekday-hour{font-size:12px;color:var(--muted);font-weight:700;text-align:center;}
 .weekday-pct{font-size:13px;color:var(--gold);font-weight:800;text-align:right;}
@@ -860,26 +863,45 @@ function renderDiasAssertivosPorAtivo(dados, wrapId){
 
   const linhas=Object.keys(porAtivo).map(ativo=>{
     const item=porAtivo[ativo];
-    const combos=diasOrdem.map(dow=>{
+    const combos=[];
+    diasOrdem.forEach(dow=>{
       const horas=item.dias[dow].horas;
-      const melhorHora=Object.keys(horas).map(h=>horas[h])
-        .filter(st=>st.t+st.s+st.v>0)
-        .sort((a,b)=>taxaStats(b)-taxaStats(a) || (b.t+b.s+b.v)-(a.t+a.s+a.v))[0];
-      return melhorHora?{dow,st:melhorHora,pct:taxaStats(melhorHora)}:null;
-    }).filter(Boolean).sort((a,b)=>b.pct-a.pct || (b.st.t+b.st.s+b.st.v)-(a.st.t+a.st.s+a.st.v));
+      Object.keys(horas).forEach(h=>{
+        const st=horas[h];
+        const total=st.t+st.s+st.v;
+        if(total>0) combos.push({dow,st,pct:taxaStats(st),total});
+      });
+    });
+    combos.sort((a,b)=>b.pct-a.pct || b.total-a.total || diasOrdem.indexOf(a.dow)-diasOrdem.indexOf(b.dow));
     const total=item.geral.t+item.geral.s+item.geral.v;
     const score=combos[0]?combos[0].pct:taxaStats(item.geral);
     return {ativo,combos,total,score};
   }).sort((a,b)=>b.score-a.score || b.total-a.total || a.ativo.localeCompare(b.ativo));
 
-  const maxCombos = ativoAtual==='TODOS' ? 4 : 20;
+  if(ativoAtual==='TODOS'){
+    const combosGerais=linhas.flatMap(item=>item.combos.map(combo=>({...combo,ativo:item.ativo})))
+      .sort((a,b)=>b.pct-a.pct || b.total-a.total || a.ativo.localeCompare(b.ativo))
+      .slice(0,20);
+    document.getElementById(wrapId).innerHTML=combosGerais.length?`<div class="weekday-asset-row expanded">
+      <div class="weekday-asset-name">Todos</div>
+      <div class="weekday-combos">${combosGerais.map(combo=>`<div class="weekday-combo all-assets">
+        <span class="weekday-asset">${combo.ativo}</span>
+        <span class="weekday-day">${diasNomes[combo.dow]}</span>
+        <span class="weekday-hour">${labelHora(combo.st.hora)}</span>
+        <span class="weekday-pct">${combo.pct}%</span>
+      </div>`).join('')}</div>
+    </div>`:'<div class="empty-state"><p>Sem dados por ativo.</p></div>';
+    return;
+  }
+
+  const maxCombos = 20;
   document.getElementById(wrapId).innerHTML=linhas.length?linhas.map(item=>{
     const combos=item.combos.slice(0,maxCombos).map(combo=>`<div class="weekday-combo">
       <span class="weekday-day">${diasNomes[combo.dow]}</span>
       <span class="weekday-hour">${labelHora(combo.st.hora)}</span>
       <span class="weekday-pct">${combo.pct}%</span>
     </div>`).join('');
-    return `<div class="weekday-asset-row">
+    return `<div class="weekday-asset-row ${ativoAtual==='TODOS'?'':'expanded'}">
       <div class="weekday-asset-name">${item.ativo}</div>
       <div class="weekday-combos">${combos || '<span class="weekday-empty">Sem dados por dia e horário</span>'}</div>
     </div>`;
