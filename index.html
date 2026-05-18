@@ -289,7 +289,6 @@ footer{position:relative;z-index:10;text-align:center;padding:16px;font-size:10p
     </div>
     <!-- TG Filter -->
     <div class="tg-filter" id="tgFilter">
-      <button class="tgbtn" onclick="mudarTG('19H',this)">Abertura</button>
       <button class="tgbtn" onclick="mudarTG('H1M1',this)">H1M1</button>
       <button class="tgbtn" onclick="mudarTG('H1M2',this)">H1M2</button>
       <button class="tgbtn active" onclick="mudarTG('H1M5',this)">H1M5</button>
@@ -1077,11 +1076,15 @@ function fmtPct(v){
 
 function escolherMelhorRR(linhas){
   if(!linhas.length) return null;
-  return [...linhas].sort((a,b)=>
-    numRR(b.rr_medio)-numRR(a.rr_medio) ||
-    numRR(b.assertividade)-numRR(a.assertividade) ||
-    numRR(a.margem)-numRR(b.margem)
-  )[0];
+  const operacionais=linhas.filter(r=>numRR(r.margem)>0 && numRR(r.recuo)>0);
+  const base=operacionais.length?operacionais:linhas;
+  return [...base].sort((a,b)=>{
+    const scoreA=numRR(a.rr_medio)*(numRR(a.assertividade)/100);
+    const scoreB=numRR(b.rr_medio)*(numRR(b.assertividade)/100);
+    return scoreB-scoreA ||
+      numRR(b.rr_medio)-numRR(a.rr_medio) ||
+      numRR(b.assertividade)-numRR(a.assertividade);
+  })[0];
 }
 
 async function carregarRRAtivo(){
