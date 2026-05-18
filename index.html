@@ -4,6 +4,7 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>Primas Traders — Backtest</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%23081529'/%3E%3Cpath d='M14 38c12-2 19-10 25-24 2 12-2 22-12 30 10-3 17-9 22-18 3 12-7 24-25 27' fill='none' stroke='%23c9a84c' stroke-width='5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"/>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=Barlow:wght@300;400;500;600&family=Barlow+Condensed:wght@400;500;600;700&display=swap" rel="stylesheet"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <style>
@@ -148,6 +149,18 @@ main{position:relative;z-index:10;padding:24px 28px;max-width:1400px;margin:0 au
 .weekday-hour{font-size:12px;color:var(--muted);font-weight:700;text-align:center;}
 .weekday-pct{font-size:13px;color:var(--gold);font-weight:800;text-align:right;}
 .weekday-empty{font-size:12px;color:var(--muted);}
+
+/* RR */
+.rr-highlight{display:flex;align-items:center;justify-content:space-between;gap:16px;background:rgba(201,168,76,.09);border:1px solid rgba(201,168,76,.22);border-radius:8px;padding:12px 14px;margin-bottom:14px;}
+.rr-highlight-label{font-size:10px;color:var(--gold);letter-spacing:1.6px;text-transform:uppercase;font-weight:700;}
+.rr-highlight-main{font-size:18px;font-weight:800;color:#f0f2f6;}
+.rr-highlight-sub{font-size:11px;color:var(--muted);text-align:right;}
+.rr-table{width:100%;border-collapse:collapse;font-size:12px;}
+.rr-table th{color:var(--gold);font-size:9px;letter-spacing:1.5px;text-transform:uppercase;padding:8px 10px;border-bottom:1px solid var(--border);text-align:left;}
+.rr-table td{padding:8px 10px;border-bottom:1px solid rgba(201,168,76,.07);}
+.rr-table tr.best-row{background:rgba(201,168,76,.08);}
+.rr-table tr.best-row td{color:#f2e5b0;font-weight:700;}
+.rr-pill{display:inline-block;background:rgba(255,255,255,.06);border-radius:5px;padding:2px 8px;font-family:'Barlow Condensed',monospace;font-weight:700;}
 
 /* CHART */
 .chart-wrap{position:relative;height:180px;}
@@ -318,12 +331,26 @@ footer{position:relative;z-index:10;text-align:center;padding:16px;font-size:10p
     </div>
   </div>
 
-  <div class="row-2">
+  <div class="row-1" id="gRRSection" style="display:none;">
     <div class="box">
+      <div class="section-title">Comparação RR</div>
+      <div id="gRRWrap"></div>
+    </div>
+  </div>
+
+  <div class="row-2">
+    <div class="box" id="gRankingBox">
       <div class="section-title">Ranking de Ativos</div>
       <table class="top-table">
         <thead><tr><th>#</th><th>Ativo</th><th>Takes</th><th>Viradas</th><th>Stops</th><th>Total</th><th>Assertividade</th></tr></thead>
         <tbody id="gRankingAtivosBody"></tbody>
+      </table>
+    </div>
+    <div class="box" id="gMesesBox" style="display:none;">
+      <div class="section-title" id="gMesesTitle">Todos os Meses</div>
+      <table class="meses-table">
+        <thead><tr><th>Mês</th><th>TG</th><th>Takes</th><th>Viradas</th><th>Stops</th><th>Total</th><th>Assertividade</th></tr></thead>
+        <tbody id="mesesBody"></tbody>
       </table>
     </div>
     <div class="box">
@@ -342,15 +369,6 @@ footer{position:relative;z-index:10;text-align:center;padding:16px;font-size:10p
     </div>
   </div>
 
-  <div class="row-2" id="gMesesSection">
-    <div class="box">
-      <div class="section-title" id="gMesesTitle">Todos os Meses</div>
-      <table class="meses-table">
-        <thead><tr><th>Mês</th><th>TG</th><th>Takes</th><th>Viradas</th><th>Stops</th><th>Total</th><th>Assertividade</th></tr></thead>
-        <tbody id="mesesBody"></tbody>
-      </table>
-    </div>
-  </div>
 </main>
 </div>
 
@@ -854,8 +872,9 @@ function renderDiasAssertivosPorAtivo(dados, wrapId){
     return {ativo,combos,total,score};
   }).sort((a,b)=>b.score-a.score || b.total-a.total || a.ativo.localeCompare(b.ativo));
 
+  const maxCombos = ativoAtual==='TODOS' ? 4 : 20;
   document.getElementById(wrapId).innerHTML=linhas.length?linhas.map(item=>{
-    const combos=item.combos.slice(0,4).map(combo=>`<div class="weekday-combo">
+    const combos=item.combos.slice(0,maxCombos).map(combo=>`<div class="weekday-combo">
       <span class="weekday-day">${diasNomes[combo.dow]}</span>
       <span class="weekday-hour">${labelHora(combo.st.hora)}</span>
       <span class="weekday-pct">${combo.pct}%</span>
@@ -944,6 +963,75 @@ function renderTop10Tabela(sh, bodyId){
   }).join(''):'<tr><td colspan="7" style="color:var(--muted);text-align:center;padding:16px;">Sem dados.</td></tr>';
 }
 
+function numRR(v){
+  const n=Number(v);
+  return Number.isFinite(n)?n:0;
+}
+
+function fmtDecimal(v,casas=3){
+  return numRR(v).toFixed(casas);
+}
+
+function fmtPct(v){
+  return numRR(v).toFixed(2).replace('.',',')+'%';
+}
+
+function escolherMelhorRR(linhas){
+  if(!linhas.length) return null;
+  const rrs=linhas.map(r=>numRR(r.rr_medio));
+  const accs=linhas.map(r=>numRR(r.assertividade));
+  const minRR=Math.min(...rrs), maxRR=Math.max(...rrs);
+  const minAcc=Math.min(...accs), maxAcc=Math.max(...accs);
+  return linhas.map(r=>{
+    const rrNorm=maxRR===minRR?1:(numRR(r.rr_medio)-minRR)/(maxRR-minRR);
+    const accNorm=maxAcc===minAcc?1:(numRR(r.assertividade)-minAcc)/(maxAcc-minAcc);
+    const score=((rrNorm+accNorm)/2) - Math.abs(rrNorm-accNorm)*0.15;
+    return {...r,score};
+  }).sort((a,b)=>b.score-a.score || numRR(b.assertividade)-numRR(a.assertividade))[0];
+}
+
+async function carregarRRAtivo(){
+  const section=document.getElementById('gRRSection');
+  const wrap=document.getElementById('gRRWrap');
+  if(ativoAtual==='TODOS'){
+    section.style.display='none';
+    wrap.innerHTML='';
+    return;
+  }
+  section.style.display='grid';
+  wrap.innerHTML='<div class="empty-state"><p>Carregando comparação RR...</p></div>';
+  const rows=await supaFetch('/rest/v1/rr_ativos?ativo=eq.'+encodeURIComponent(ativoAtual)+'&tempo_grafico=eq.'+encodeURIComponent(tgAtual)+'&order=margem.asc,recuo.asc&select=*')||[];
+  if(!rows.length){
+    wrap.innerHTML='<div class="empty-state"><p>Nenhuma comparação RR para '+ativoAtual+' · '+tgAtual+'.</p></div>';
+    return;
+  }
+  const melhor=escolherMelhorRR(rows);
+  const keyMelhor=melhor?melhor.margem+'|'+melhor.recuo:'';
+  wrap.innerHTML=`
+    <div class="rr-highlight">
+      <div>
+        <div class="rr-highlight-label">Melhor opção</div>
+        <div class="rr-highlight-main">Margem ${fmtDecimal(melhor.margem)} · Recuo ${fmtDecimal(melhor.recuo)} · RR ${fmtDecimal(melhor.rr_medio)}</div>
+      </div>
+      <div class="rr-highlight-sub">${ativoAtual} · ${tgAtual}<br/>Assertividade ${fmtPct(melhor.assertividade)}</div>
+    </div>
+    <table class="rr-table">
+      <thead><tr><th>Margem</th><th>Recuo</th><th>RR médio</th><th>Take</th><th>Virada</th><th>Stop</th><th>Assertividade</th></tr></thead>
+      <tbody>${rows.map(r=>{
+        const isBest=(r.margem+'|'+r.recuo)===keyMelhor;
+        return `<tr class="${isBest?'best-row':''}">
+          <td><span class="rr-pill">${fmtDecimal(r.margem)}</span></td>
+          <td><span class="rr-pill">${fmtDecimal(r.recuo)}</span></td>
+          <td><span class="rr-pill">${fmtDecimal(r.rr_medio)}</span></td>
+          <td>${r.take||0}</td>
+          <td>${r.virada||0}</td>
+          <td>${r.stop||0}</td>
+          <td>${fmtPct(r.assertividade)}</td>
+        </tr>`;
+      }).join('')}</tbody>
+    </table>`;
+}
+
 // ── VISÃO GERAL ───────────────────────────────────────────────
 async function carregarGeral(){
   document.getElementById('loadingWrap').style.display='flex';
@@ -967,7 +1055,9 @@ async function carregarGeral(){
     ['gMelhorAtivoSub','gMelhorComboSub','gPiorComboSub'].forEach(id=>document.getElementById(id).textContent='Sem dados suficientes');
     document.getElementById('gDiasAtivosWrap').innerHTML='';
     document.getElementById('mesesBody').innerHTML='';
-    document.getElementById('gMesesSection').style.display='none';
+    document.getElementById('gRRSection').style.display='none';
+    document.getElementById('gRankingBox').style.display=ativoAtual==='TODOS'?'block':'none';
+    document.getElementById('gMesesBox').style.display='none';
     return;
   }
 
@@ -1022,6 +1112,9 @@ async function carregarGeral(){
 
   const baseRanking = ativoAtual==='TODOS' ? dadosTodos : dados;
   renderRankingAtivos(baseRanking,'gRankingAtivosBody');
+  document.getElementById('gRankingBox').style.display=ativoAtual==='TODOS'?'block':'none';
+  document.getElementById('gMesesBox').style.display=ativoAtual==='TODOS'?'none':'block';
+  await carregarRRAtivo();
 
   const ativosStats=statsPorAtivo(baseRanking||[]);
   const melhorAtivo=ordenarStats(Object.keys(ativosStats).map(a=>({ativo:a,st:ativosStats[a]})))[0];
@@ -1062,8 +1155,6 @@ async function carregarGeral(){
   renderTop10AtivoHoraTabela(dados,'gPior10Body','pior');
 
   // Tabela de meses
-  const mesesSection=document.getElementById('gMesesSection');
-  mesesSection.style.display=ativoAtual==='TODOS'?'none':'grid';
   document.getElementById('gMesesTitle').textContent='Todos os Meses — '+ativoAtual;
   const melhorPct=Math.max(...mesesLista.map(m=>{const ms=porMes[m];const t=ms.takes+ms.stops+ms.viradas;return t>0?Math.round((ms.takes+ms.viradas)/t*100):0;}));
   document.getElementById('mesesBody').innerHTML=mesesLista.reverse().map(m=>{
