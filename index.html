@@ -1078,13 +1078,13 @@ function escolherMelhorRR(linhas){
   if(!linhas.length) return null;
   const operacionais=linhas.filter(r=>numRR(r.margem)>0 && numRR(r.recuo)>0);
   const base=operacionais.length?operacionais:linhas;
-  return [...base].sort((a,b)=>{
-    const scoreA=numRR(a.rr_medio)*(numRR(a.assertividade)/100);
-    const scoreB=numRR(b.rr_medio)*(numRR(b.assertividade)/100);
-    return scoreB-scoreA ||
-      numRR(b.rr_medio)-numRR(a.rr_medio) ||
-      numRR(b.assertividade)-numRR(a.assertividade);
-  })[0];
+  const melhorRR=Math.max(...base.map(r=>numRR(r.rr_medio)));
+  const faixaSaudavel=base.filter(r=>numRR(r.rr_medio)>=melhorRR*.90);
+  return [...faixaSaudavel].sort((a,b)=>
+    numRR(b.assertividade)-numRR(a.assertividade) ||
+    numRR(b.rr_medio)-numRR(a.rr_medio) ||
+    numRR(a.margem)-numRR(b.margem)
+  )[0];
 }
 
 async function carregarRRAtivo(){
