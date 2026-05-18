@@ -1039,16 +1039,11 @@ function fmtPct(v){
 
 function escolherMelhorRR(linhas){
   if(!linhas.length) return null;
-  const rrs=linhas.map(r=>numRR(r.rr_medio));
-  const accs=linhas.map(r=>numRR(r.assertividade));
-  const minRR=Math.min(...rrs), maxRR=Math.max(...rrs);
-  const minAcc=Math.min(...accs), maxAcc=Math.max(...accs);
-  return linhas.map(r=>{
-    const rrNorm=maxRR===minRR?1:(numRR(r.rr_medio)-minRR)/(maxRR-minRR);
-    const accNorm=maxAcc===minAcc?1:(numRR(r.assertividade)-minAcc)/(maxAcc-minAcc);
-    const score=((rrNorm+accNorm)/2) - Math.abs(rrNorm-accNorm)*0.15;
-    return {...r,score};
-  }).sort((a,b)=>b.score-a.score || numRR(b.assertividade)-numRR(a.assertividade))[0];
+  return [...linhas].sort((a,b)=>
+    numRR(b.rr_medio)-numRR(a.rr_medio) ||
+    numRR(b.assertividade)-numRR(a.assertividade) ||
+    numRR(a.margem)-numRR(b.margem)
+  )[0];
 }
 
 async function carregarRRAtivo(){
