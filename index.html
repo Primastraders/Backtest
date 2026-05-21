@@ -168,6 +168,11 @@ main{position:relative;z-index:10;padding:24px 28px;max-width:1400px;margin:0 au
 .weekday-op-asset{font-size:10px;color:#e6eaf0;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .weekday-op-hour{font-size:10px;color:var(--muted);font-weight:800;text-align:center;}
 .weekday-op-pct{font-size:10px;color:var(--gold);font-weight:800;text-align:right;}
+.hour-accuracy-row{display:flex;flex-wrap:wrap;gap:8px;}
+.hour-accuracy-item{display:flex;align-items:center;gap:6px;border-radius:6px;background:rgba(255,255,255,.028);border:1px solid rgba(201,168,76,.08);padding:7px 9px;min-width:86px;}
+.hour-accuracy-hour{font-size:11px;color:#e6eaf0;font-weight:900;}
+.hour-accuracy-pct{font-size:12px;color:var(--gold);font-weight:900;}
+.hour-accuracy-sub{font-size:9px;color:var(--muted);margin-left:auto;}
 .asset-week-heatmap{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:8px;}
 .asset-week-day{background:rgba(10,24,43,.28);border:1px solid rgba(201,168,76,.07);border-radius:8px;padding:8px 7px;min-height:0;}
 .asset-week-title{font-size:10px;color:var(--gold);font-weight:800;text-align:center;margin-bottom:6px;}
@@ -379,6 +384,13 @@ footer{position:relative;z-index:10;text-align:center;padding:16px;font-size:10p
           <tbody id="gPior10Body"></tbody>
         </table>
       </div>
+    </div>
+  </div>
+
+  <div class="row-1" id="gHorarioAssertividadeBox" style="display:none;">
+    <div class="box">
+      <div class="section-title" id="gHorarioAssertividadeTitle">Assertividade por Horário</div>
+      <div class="hour-accuracy-row" id="gHorarioAssertividadeWrap"></div>
     </div>
   </div>
 
@@ -989,6 +1001,34 @@ function renderHeatmap(sh, wrId){
   }).join('');
 }
 
+function renderAssertividadePorHorario(dados){
+  const box=document.getElementById('gHorarioAssertividadeBox');
+  const wrap=document.getElementById('gHorarioAssertividadeWrap');
+  const title=document.getElementById('gHorarioAssertividadeTitle');
+  if(ativoAtual==='TODOS'){
+    box.style.display='none';
+    wrap.innerHTML='';
+    return;
+  }
+  box.style.display='grid';
+  title.textContent='Assertividade por Horário — '+ativoAtual+' · '+tgAtual;
+  const sh=statsHora(dados||[]);
+  const horas=HORAS_DASH.filter(h=>{
+    const st=sh[h];
+    return st && st.t+st.s+st.v>0;
+  }).sort((a,b)=>Number(a)-Number(b));
+  wrap.innerHTML=horas.length?horas.map(h=>{
+    const st=sh[h];
+    const total=st.t+st.s+st.v;
+    const pct=taxaStats(st);
+    return `<div class="hour-accuracy-item">
+      <span class="hour-accuracy-hour">${labelHora(h)}</span>
+      <span class="hour-accuracy-pct">${pct}%</span>
+      <span class="hour-accuracy-sub">${total} ops</span>
+    </div>`;
+  }).join(''):'<div class="weekday-empty">Sem dados por horário.</div>';
+}
+
 function renderTop10AtivoHoraTabela(dados, bodyId, modo='melhor'){
   const comboStats=statsAtivoHora(dados||[]);
   const linhas=Object.keys(comboStats).map(k=>({st:comboStats[k]})).filter(item=>{
@@ -1070,6 +1110,18 @@ function fmtDecimal(v,casas=3){
   return numRR(v).toFixed(casas);
 }
 
+function pointAtivo(ativo){
+  const a=String(ativo||'').toUpperCase();
+  if(a.includes('US30')) return 0.1;
+  if(a.includes('US500')||a.includes('USTEC')||a.includes('BTC')) return 0.01;
+  if(a.includes('XAU')||a.includes('XAG')||a.includes('USDJPY')||a.includes('UKOIL')||a.includes('USOIL')) return 0.001;
+  return 0.001;
+}
+
+function fmtPontosEA(v,ativo){
+  return (numRR(v)/pointAtivo(ativo)).toFixed(1);
+}
+
 function fmtPct(v){
   return numRR(v).toFixed(2).replace('.',',')+'%';
 }
@@ -1087,6 +1139,8 @@ function escolherMelhorRR(linhas){
   )[0];
 }
 
+const RR_MIN_COMPARACAO = 0.80;
+
 async function carregarRRAtivo(){
   const section=document.getElementById('gRRSection');
   const wrap=document.getElementById('gRRWrap');
@@ -1103,22 +1157,27 @@ async function carregarRRAtivo(){
     return;
   }
   const melhor=escolherMelhorRR(rows);
+  const rowsVisiveis=rows.filter(r=>numRR(r.rr_medio)>=RR_MIN_COMPARACAO);
+  const bestInVisiveis=melhor&&rowsVisiveis.some(r=>(r.margem+'|'+r.recuo)===(melhor.margem+'|'+melhor.recuo));
+  const rowsComparacao=rowsVisiveis.length
+    ? (bestInVisiveis?rowsVisiveis:[melhor,...rowsVisiveis])
+    : rows;
   const keyMelhor=melhor?melhor.margem+'|'+melhor.recuo:'';
   wrap.innerHTML=`
     <div class="rr-highlight">
       <div>
         <div class="rr-highlight-label">Melhor opção</div>
-        <div class="rr-highlight-main">Margem ${fmtDecimal(melhor.margem)} · Recuo ${fmtDecimal(melhor.recuo)} · RR ${fmtDecimal(melhor.rr_medio)}</div>
+        <div class="rr-highlight-main">Margem ${fmtPontosEA(melhor.margem,ativoAtual)} · Recuo ${fmtPontosEA(melhor.recuo,ativoAtual)} · RR ${fmtDecimal(melhor.rr_medio)}</div>
       </div>
       <div class="rr-highlight-sub">${ativoAtual} · ${tgAtual}<br/>Assertividade ${fmtPct(melhor.assertividade)}</div>
     </div>
     <table class="rr-table">
       <thead><tr><th>Margem</th><th>Recuo</th><th>RR médio</th><th>Take</th><th>Virada</th><th>Stop</th><th>Assertividade</th></tr></thead>
-      <tbody>${rows.map(r=>{
+      <tbody>${rowsComparacao.map(r=>{
         const isBest=(r.margem+'|'+r.recuo)===keyMelhor;
         return `<tr class="${isBest?'best-row':''}">
-          <td><span class="rr-pill">${fmtDecimal(r.margem)}</span></td>
-          <td><span class="rr-pill">${fmtDecimal(r.recuo)}</span></td>
+          <td><span class="rr-pill">${fmtPontosEA(r.margem,ativoAtual)}</span></td>
+          <td><span class="rr-pill">${fmtPontosEA(r.recuo,ativoAtual)}</span></td>
           <td><span class="rr-pill">${fmtDecimal(r.rr_medio)}</span></td>
           <td>${r.take||0}</td>
           <td>${r.virada||0}</td>
@@ -1151,6 +1210,8 @@ async function carregarGeral(){
     ['gMelhorAtivo','gMelhorCombo','gPiorCombo'].forEach(id=>document.getElementById(id).textContent='—');
     ['gMelhorAtivoSub','gMelhorComboSub','gPiorComboSub'].forEach(id=>document.getElementById(id).textContent='Sem dados suficientes');
     document.getElementById('gDiasAtivosWrap').innerHTML='';
+    document.getElementById('gHorarioAssertividadeBox').style.display='none';
+    document.getElementById('gHorarioAssertividadeWrap').innerHTML='';
     document.getElementById('mesesBody').innerHTML='';
     document.getElementById('gRRSection').style.display='none';
     document.getElementById('gRankingBox').style.display=ativoAtual==='TODOS'?'block':'none';
@@ -1248,6 +1309,7 @@ async function carregarGeral(){
   }
 
   renderDiasAssertivosPorAtivo(baseRanking,'gDiasAtivosWrap');
+  renderAssertividadePorHorario(dados);
 
   if(ativoAtual==='TODOS'){
     document.getElementById('gTopGrid').classList.add('single');
