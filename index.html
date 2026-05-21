@@ -1309,7 +1309,8 @@ async function carregarGeral(){
   }
 
   renderDiasAssertivosPorAtivo(baseRanking,'gDiasAtivosWrap');
-  renderAssertividadePorHorario(dados);
+  document.getElementById('gHorarioAssertividadeBox').style.display='none';
+  document.getElementById('gHorarioAssertividadeWrap').innerHTML='';
 
   if(ativoAtual==='TODOS'){
     document.getElementById('gTopGrid').classList.add('single');
@@ -1317,12 +1318,12 @@ async function carregarGeral(){
   }else{
     document.getElementById('gTopGrid').classList.remove('single');
     document.getElementById('gPior10Box').style.display='block';
-    document.getElementById('gPior10Title').textContent='Top 10 Piores Ativo/Horário';
+    document.getElementById('gPior10Title').textContent='Top 10 Melhores Horários';
     document.getElementById('gPior10Content').innerHTML=`<table class="top-table">
       <thead><tr><th>#</th><th>Ativo</th><th>Hora</th><th>Takes</th><th>Viradas</th><th>Stops</th><th>Total</th><th>Assertividade</th></tr></thead>
       <tbody id="gPior10Body"></tbody>
     </table>`;
-    renderTop10AtivoHoraTabela(dados,'gPior10Body','pior');
+    renderTop10AtivoHoraTabela(dados,'gPior10Body','melhor');
   }
 
   // Tabela de meses
