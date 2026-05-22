@@ -311,7 +311,8 @@ footer{position:relative;z-index:10;text-align:center;padding:16px;font-size:10p
     <!-- Mes Nav (só aparece na visão por mês) -->
     <div class="mes-nav" id="mesNav" style="display:none;">
       <button onclick="navMes(-1)">&#8592;</button>
-      <select id="selMes">
+      <select id="selMes" onchange="recarregarPeriodo()">
+        <option value="TODOS">Todos</option>
         <option value="01">Janeiro</option><option value="02">Fevereiro</option>
         <option value="03">Março</option><option value="04">Abril</option>
         <option value="05">Maio</option><option value="06">Junho</option>
@@ -780,7 +781,18 @@ function mudarTG(tg, el){
   else carregarSimulador();
 }
 
+function recarregarPeriodo(){
+  if(viewAtual==='simulador') carregarSimulador();
+  else carregarMes();
+}
+
 function navMes(d){
+  if(document.getElementById('selMes').value==='TODOS'){
+    document.getElementById('selAno').value = parseInt(document.getElementById('selAno').value)+d;
+    if(viewAtual==='simulador') carregarSimulador();
+    else carregarMes();
+    return;
+  }
   const m = parseInt(document.getElementById('selMes').value)+d;
   let mes = m, ano = parseInt(document.getElementById('selAno').value);
   if(mes>12){mes=1;ano++;}
@@ -1368,9 +1380,10 @@ async function carregarMes(){
 
   const mes=document.getElementById('selMes').value;
   const ano=parseInt(document.getElementById('selAno').value);
-  const mesNome=MESES[parseInt(mes)]+'/'+ano;
+  const todosMeses = mes==='TODOS';
+  const mesNome=todosMeses?'Todos os meses/'+ano:MESES[parseInt(mes)]+'/'+ano;
 
-  const dadosTodos=await supaFetch('/rest/v1/backtest?mes=eq.'+encodeURIComponent(mesNome)+'&tempo_grafico=eq.'+tgAtual+'&order=data.asc,horario.asc&select=*');
+  const dadosTodos=await supaFetch('/rest/v1/backtest?'+(todosMeses?'ano=eq.'+ano:'mes=eq.'+encodeURIComponent(mesNome))+'&tempo_grafico=eq.'+tgAtual+'&order=data.asc,horario.asc&select=*');
   const dados=filtrarAtivo(dadosTodos);
 
   document.getElementById('loadingWrap').style.display='none';
@@ -1380,7 +1393,7 @@ async function carregarMes(){
     document.getElementById('cTotal').textContent='0';
     document.getElementById('cPeriodo').textContent=mesNome+' · '+tgAtual+' · '+(ativoAtual==='TODOS'?'Todos ativos':ativoAtual);
     ['cTakes','cStops','cViradas','cTaxa','cMelhor'].forEach(id=>document.getElementById(id).textContent='—');
-    document.getElementById('monthCalendarBox').style.display=ativoAtual==='TODOS'?'none':'block';
+    document.getElementById('monthCalendarBox').style.display='none';
     document.getElementById('calWrap').innerHTML='<div class="empty-state"><p>Nenhum dado para '+mesNome+' ('+tgAtual+' · '+(ativoAtual==='TODOS'?'Todos ativos':ativoAtual)+')</p></div>';
     ['top3Wrap','pior3Wrap','distWrap','top10Body','heatmapWrap'].forEach(id=>document.getElementById(id).innerHTML='');
     return;
@@ -1414,10 +1427,10 @@ async function carregarMes(){
   renderDist(dados,'distWrap');
   renderHeatmap(sh,'heatmapWrap');
 
-  // Calendário: aparece só quando há um ativo específico selecionado.
+  // Calendário: aparece só quando há um ativo específico e um mês específico selecionado.
   const calendarBox=document.getElementById('monthCalendarBox');
-  calendarBox.style.display=ativoAtual==='TODOS'?'none':'block';
-  if(ativoAtual!=='TODOS'){
+  calendarBox.style.display=(ativoAtual==='TODOS'||todosMeses)?'none':'block';
+  if(ativoAtual!=='TODOS'&&!todosMeses){
     const mapa={};
     dados.forEach(d=>mapa[d.data+'_'+d.horario]=d.resultado);
     const datasComDados=new Set(dados.map(d=>d.data));
@@ -1458,16 +1471,35 @@ async function carregarMes(){
 
   // Gráfico 6 meses
   const labels6=[],taxas6=[];
-  for(let i=5;i>=0;i--){
-    let m2=parseInt(mes)-i,a2=ano;
-    if(m2<=0){m2+=12;a2--;}
-    const mn2=MESES[m2]+'/'+a2;
-    const d2Todos=await supaFetch('/rest/v1/backtest?mes=eq.'+encodeURIComponent(mn2)+'&tempo_grafico=eq.'+tgAtual+'&select=*');
-    const d2=filtrarAtivo(d2Todos);
-    const tot=d2?d2.length:0;
-    const ac=d2?d2.filter(d=>d.resultado==='Take'||d.resultado==='Virada').length:0;
-    labels6.push(MESES[m2].slice(0,3)+'/'+String(a2).slice(2));
-    taxas6.push(tot>0?Math.round(ac/tot*100):0);
+  if(todosMeses){
+    const porMesAno={};
+    dados.forEach(d=>{
+      if(!porMesAno[d.mes]) porMesAno[d.mes]=[];
+      porMesAno[d.mes].push(d);
+    });
+    Object.keys(porMesAno).sort((a,b)=>{
+      const [ma,aa]=a.split('/'); const [mb,ab]=b.split('/');
+      return (+aa-(+ab)) || (MESES.indexOf(ma)-MESES.indexOf(mb));
+    }).forEach(mn2=>{
+      const grupo=porMesAno[mn2];
+      const [nomeM,a2]=mn2.split('/');
+      const tot=grupo.length;
+      const ac=grupo.filter(d=>d.resultado==='Take'||d.resultado==='Virada').length;
+      labels6.push(nomeM.slice(0,3)+'/'+String(a2).slice(2));
+      taxas6.push(tot>0?Math.round(ac/tot*100):0);
+    });
+  }else{
+    for(let i=5;i>=0;i--){
+      let m2=parseInt(mes)-i,a2=ano;
+      if(m2<=0){m2+=12;a2--;}
+      const mn2=MESES[m2]+'/'+a2;
+      const d2Todos=await supaFetch('/rest/v1/backtest?mes=eq.'+encodeURIComponent(mn2)+'&tempo_grafico=eq.'+tgAtual+'&select=*');
+      const d2=filtrarAtivo(d2Todos);
+      const tot=d2?d2.length:0;
+      const ac=d2?d2.filter(d=>d.resultado==='Take'||d.resultado==='Virada').length:0;
+      labels6.push(MESES[m2].slice(0,3)+'/'+String(a2).slice(2));
+      taxas6.push(tot>0?Math.round(ac/tot*100):0);
+    }
   }
   if(chartEv){chartEv.destroy();}
   const ctx2=document.getElementById('chartEvolucao').getContext('2d');
@@ -1542,9 +1574,10 @@ async function carregarSimulador(){
   const periodo=document.getElementById('simPeriodo').value;
   const mes=document.getElementById('selMes').value;
   const ano=parseInt(document.getElementById('selAno').value);
-  const mesNome=MESES[parseInt(mes)]+'/'+ano;
+  const todosMeses = mes==='TODOS';
+  const mesNome=todosMeses?'Todos os meses/'+ano:MESES[parseInt(mes)]+'/'+ano;
   let url='/rest/v1/backtest?tempo_grafico=eq.'+encodeURIComponent(tgAtual)+'&order=data.asc,horario.asc&select=*';
-  if(periodo==='mes') url='/rest/v1/backtest?mes=eq.'+encodeURIComponent(mesNome)+'&tempo_grafico=eq.'+encodeURIComponent(tgAtual)+'&order=data.asc,horario.asc&select=*';
+  if(periodo==='mes') url='/rest/v1/backtest?'+(todosMeses?'ano=eq.'+ano:'mes=eq.'+encodeURIComponent(mesNome))+'&tempo_grafico=eq.'+encodeURIComponent(tgAtual)+'&order=data.asc,horario.asc&select=*';
 
   const dadosBrutos=await supaFetch(url);
   const horas=horasSelecionadasSim();
